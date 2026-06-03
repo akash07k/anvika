@@ -1,0 +1,22 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      run: bunx oxfmt --check {staged_files}
+      glob: '*.{ts,tsx,js,jsx,cjs,json}'
+    lint:
+      run: bunx oxlint {staged_files}
+      glob: '*.{ts,tsx}'
+    typecheck:
+      run: bun run typecheck
+    markdown:
+      run: bunx markdownlint-cli2 --fix {staged_files}
+      glob: '*.md'
+      stage_fixed: true
+    test:
+      run: bun run test
+
+commit-msg:
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}
