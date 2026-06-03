@@ -1,0 +1,28 @@
+{
+  "name": "@anvika/shared",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./chat": "./src/chat.ts",
+    "./chat/*": "./src/chat/*.ts",
+    "./client-log": "./src/client-log.ts",
+    "./connections/*": "./src/connections/*.ts",
+    "./conversation": "./src/conversation.ts",
+    "./conversation/*": "./src/conversation/*.ts",
+    "./diagnostics/events": "./src/diagnostics/events.ts",
+    "./diagnostics/registry": "./src/diagnostics/registry.ts",
+    "./errors": "./src/errors.ts",
+    "./health": "./src/health.ts",
+    "./log-entry": "./src/log-entry.ts",
+    "./models/*": "./src/models/*.ts",
+    "./reasoning/*": "./src/reasoning/*.ts",
+    "./settings/*": "./src/settings/*.ts",
+    "./version": "./src/version.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "ai": "^6.0.206"
+  }
+}
