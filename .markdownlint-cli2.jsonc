@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2/main/schema/markdownlint-cli2-config-schema.json",
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": { "siblings_only": true },
+    "MD025": false,
+    "MD033": { "allowed_elements": ["br", "details", "summary"] },
+    "MD040": false,
+    "MD041": false,
+    "MD060": false,
+    "no-multiple-blanks": { "maximum": 2 },
+  },
+  "gitignore": true,
+  "ignores": ["**/node_modules/**", "userdata/**", "userdata-e2e/**", "CHANGELOG.md"],
+}

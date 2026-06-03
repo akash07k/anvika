@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "ignorePatterns": [
+    "**/*.md",
+    "**/routeTree.gen.ts",
+    "apps/server/drizzle/meta",
+    "bun.lock",
+    "dist",
+    "userdata",
+    "userdata-e2e",
+    "node_modules"
+  ]
+}
