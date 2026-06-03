@@ -1,0 +1,6 @@
+# Drizzle migration SQL is sha256-hashed by both the folder migrator and the embedded
+# migrations runner (ADR 0020). Forcing LF guarantees one canonical byte sequence on every
+# platform, so the hash is identical regardless of git autocrlf or host OS. Without this, a
+# CRLF checkout would change the hash and could re-run already-applied migrations once
+# cross-compiled binaries (deferred) run against a DB created on a different OS.
+*.sql text eol=lf
