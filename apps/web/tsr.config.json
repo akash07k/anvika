@@ -1,0 +1,9 @@
+{
+  "target": "react",
+  "autoCodeSplitting": true,
+  "routesDirectory": "./src/routes",
+  "routeFileIgnorePattern": "\\.(test|spec)\\.",
+  "generatedRouteTree": "./src/routeTree.gen.ts",
+  "quoteStyle": "single",
+  "semicolons": true
+}
