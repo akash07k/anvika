@@ -17,8 +17,10 @@ order and stops at the first failure:
 - `bun run test:browser` - the real-Chromium Vitest project (`web-browser`).
 - `bun run e2e` - the Playwright end-to-end suite.
 
-Passing the pre-commit hook is not the same as passing the gate. The hook runs only a subset
-(see the next section), so always run the full `bun run verify` before you push.
+Passing the pre-commit hook is not the same as passing the gate. It runs only a subset of the
+checks and scopes its expensive checks to commits that stage source, configuration, style, or
+migration files. Markdown-only commits run Markdown lint only. Always run the full
+`bun run verify` before you push.
 
 ## The three Vitest projects
 
@@ -37,12 +39,13 @@ Rule of thumb: write a test in `web` (jsdom) if it asks "did the component rende
 thing", and in `web-browser` if it asks "does focus, a live keyboard event, or a real
 accessibility role behave correctly". Server and shared logic goes in `node`.
 
-The trap to know before you push: the pre-commit hook (`lefthook.yml`) runs `bun run test`,
-which is only the `node` and `web` projects. It does NOT run `web-browser`. So a focus test, a
-keyboard test, or a role and landmark test can pass the commit and still be broken, because the
-project that exercises it never ran. Those tests run only under `bun run test:browser`, which
-`bun run verify` includes. Always run the full gate before pushing - a green commit is not a
-green push.
+The trap to know before you push: when a commit stages source, configuration, style, or migration
+files, the pre-commit hook (`lefthook.yml`) runs `bun run test`, which is only the `node` and
+`web` projects. It does NOT run `web-browser`. A Markdown-only commit skips fast tests entirely.
+So a focus test, a keyboard test, or a role and landmark test can pass the commit and still be
+broken, because the project that exercises it never ran. Those tests run only under
+`bun run test:browser`, which `bun run verify` includes. Always run the full gate before
+pushing - a green commit is not a green push.
 
 ## bun:sqlite tests
 
