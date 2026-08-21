@@ -15,6 +15,28 @@ Structure (Bun workspace): `packages/shared` (Zod schemas + types - the contract
 `apps/server` (Hono server), `apps/web` (Vite/React client), `tooling/` (scripts and the
 launcher), with end-to-end tests under `tests/e2e/`.
 
+## Commands
+
+| Purpose | Command |
+| --- | --- |
+| Install dependencies | `bun install` |
+| Run the production-style local app | `bun run serve` |
+| Run the full development environment | `bun run dev` |
+| Run only the Server in watch mode | `bun run dev:server` |
+| Run only the web client | `bun run dev:web` |
+| Stop development processes | `bun run kill` |
+| Build the web client | `bun run build:web` |
+| Build the standalone binary | `bun run build` |
+| Type check | `bun run typecheck` |
+| Lint | `bun run lint` |
+| Check source formatting | `bun run format:check` |
+| Lint Markdown | `bun run md:lint` |
+| Run Node and jsdom tests | `bun run test` |
+| Run Bun SQLite adapter tests | `bun run test:bun` |
+| Run browser-mode component tests | `bun run test:browser` |
+| Run Playwright end-to-end tests | `bun run e2e` |
+| Verify | `bun run verify` |
+
 ## Conventions
 
 Full conventions are in `docs/agents/conventions.md`. The hard, non-negotiable

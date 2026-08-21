@@ -1,156 +1,103 @@
 # Coding Standards
 
-> Your conventions. Edit these once to match your stack. The defaults below
-> assume Next.js + TypeScript + Tailwind + Prisma; change or trim anything that
-> doesn't fit your project.
->
-> Run `/onboard` after installing the Blueprint. It tunes this file to the real
-> project stack, along with `AGENTS.md`, `CLAUDE.md` when present,
-> `ai-interaction.md`, `.gitignore`, and README placement. Review the result
-> before `/overview`.
+## Workspace and architecture
 
-## TypeScript
+- Use the Bun workspace boundaries: `packages/shared` holds the Zod-backed Contract,
+  `apps/server` owns business logic and persistence, and `apps/web` owns presentation
+  and accessibility.
+- Keep clients thin. Put behavior that another client would need in the Server behind
+  the versioned `/api/v1` HTTP Contract.
+- Keep authored source files focused and below the 450-line hard cap. Split by
+  responsibility rather than accumulating unrelated helpers.
+- Apply KISS and SOLID. Every file and public interface should have one clear
+  responsibility.
 
-- Strict mode enabled
-- No `any` types - use proper typing or `unknown`
-- Define interfaces for all props, API responses, and data models
-- Use type inference where obvious, explicit types where helpful
+## TypeScript and naming
 
-## React
+- Use strict TypeScript with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+  and the other root compiler checks enabled.
+- Do not use `any`, non-null assertions, or untracked TypeScript suppression comments.
+  Prefer `unknown` plus narrowing at boundaries.
+- Use named exports only and `import type` for type-only imports. Do not add barrel
+  files.
+- Use PascalCase React component files, kebab-case non-component files, camelCase
+  functions and variables, PascalCase types and interfaces, and SCREAMING_SNAKE_CASE
+  constants.
+- Add concise TSDoc or JSDoc to every exported function, type, and interface.
 
-- Functional components only (no class components)
-- Use hooks for state and side effects
-- Keep components focused - one job per component
-- Extract reusable logic into custom hooks
+## Server, Contract, and persistence
 
-## Next.js
+- Implement HTTP behavior in Hono routes and keep the canonical `{ code, message,
+  details? }` error Contract from `packages/shared`.
+- Validate every trust boundary in both directions with shared Zod schemas: HTTP
+  request and response bodies, route/query values, persisted JSON, file input, and
+  SDK passthroughs. Use strict schemas unless an explicitly documented transport
+  compatibility exception requires otherwise.
+- Keep AI SDK streaming behind its established orchestration seam. Do not duplicate
+  AI SDK capabilities in route or client code.
+- Use Drizzle over Bun SQLite for persistence. Keep storage concerns behind ports and
+  inject those ports into routes and services.
+- Treat conversations, settings, and secrets as local owner data. Never expose or log
+  a secret.
 
-- Server components by default
-- Only use `'use client'` when needed (interactivity, hooks, browser APIs)
-- Use Server Actions for form submissions and simple mutations
-- Use API routes when you need:
-  - Webhooks (Clerk, GitHub, etc.)
-  - File uploads with progress tracking
-  - Long-running operations
-  - Specific HTTP status codes or headers
-  - Endpoints for future mobile/CLI clients
-  - Third-party integrations
-- Otherwise, fetch data directly in server components
-- Dynamic routes for item/collection pages
+## Web client and styling
 
-## File Organization
+- Use React 19 function components, Vite, TanStack Router, TanStack Query, Zustand,
+  and focused custom hooks following the existing client patterns.
+- Keep one exported component per file. Destructure component props at the signature.
+- Use Tailwind CSS v4 and the established shadcn/ui components. Do not add inline
+  styles.
+- Keep route files in `apps/web/src/routes`, components in feature-oriented
+  directories under `apps/web/src/components`, and client behavior in the matching
+  hooks, stores, and library modules.
 
-- Components: `src/components/[feature]/ComponentName.tsx`
-- Pages: `src/app/[route]/page.tsx`
-- Server Actions: `src/actions/[feature].ts`
-- Types: `src/types/[feature].ts`
-- Lib/Utils: `src/lib/[utility].ts`
+## Accessibility
 
-## Naming
+- Meet WCAG 2.2 AA and treat screen-reader and keyboard behavior as acceptance
+  criteria, not visual polish.
+- Preserve visible focus, semantic controls, valid keyboard behavior, focus traps in
+  dialogs, Escape dismissal, reduced-motion support, and text alternatives for every
+  non-color state.
+- Do not use a live region for streamed chat text. Send spoken status through the
+  notification system so announcements remain concise and deterministic.
+- Test UI behavior with accessible queries by role, label, or accessible name.
 
-- Components: PascalCase (`ItemCard.tsx`)
-- Files: Match component name or kebab-case
-- Functions: camelCase
-- Constants: SCREAMING_SNAKE_CASE
-- Types/Interfaces: PascalCase (no prefix)
+## Logging and errors
 
-## Styling
+- Use LogTape, not `console`. Server events use `serverLogger`; client diagnostics use
+  typed diagnostic events.
+- Log a content-safe outcome at `info`, recoverable problems at `warning`, and failures
+  at `error`.
+- Do not log prompt or response text by default. Content logging requires the explicit
+  development opt-in. Never log API keys or secrets.
+- Surface typed, user-safe errors through the client UI while retaining useful,
+  content-safe diagnostics for operators.
 
-- Tailwind CSS for all styling
-- Tailwind v4: CSS-first config (`@theme` in `globals.css`), no `tailwind.config.js`
-- Use shadcn/ui components where applicable
-- No inline styles
-- Dark mode first, light mode as option
+## Testing and verification
 
-## Database
+- Use `bun run verify` as the full gate: type checking, linting, formatting,
+  Markdown linting, Vitest, Bun persistence tests, browser-mode tests, and Playwright
+  end-to-end tests.
+- Write Node/Vitest tests beside server, shared, and tooling code as
+  `<name>.test.ts`. Use the `web` project for jsdom component and hook tests, and
+  `.browser.test.tsx` for real-browser focus, keyboard, and accessibility behavior.
+- Keep Bun SQLite adapter tests in `*.bun.test.ts` and run them through `bun run
+  test:bun`.
+- Use Playwright and axe for end-to-end flows. A manual screen-reader pass remains
+  required for accessibility-affecting changes.
+- Before a push or pull request, run the self-review checklist and `bun run verify`.
 
-- Use Prisma ORM for all database operations
-- Always use `prisma migrate dev` for schema changes (not `db push`)
-- Run `prisma migrate status` before committing to verify migrations are in sync
-- Production deployments must run `prisma migrate deploy` before the app starts
+## Formatting, commits, and research
 
-## Data Fetching
-
-- Server components fetch directly with Prisma
-- Client components use Server Actions
-- Validate all inputs with Zod
-- Scope every user-owned query by the authenticated Clerk user id (`clerkUserId`); never trust a client-supplied user id
-
-## Error Handling
-
-- Use try/catch in Server Actions
-- Return `{ success, data, error }` pattern from actions
-- Display user-friendly error messages via toast
-
-## Testing
-
-The blueprint installs no test runner; testing is opt-in at the project level,
-because the overlay can't know your stack. Adding unit testing is an explicit
-setup task the AI can do through the normal workflow, either as a build-plan item
-or with `/tests`. The setup should choose the stack-native runner, wire the
-scripts or commands, add a small example test, and update the Commands section
-of `AGENTS.md`.
-
-When `AGENTS.md` declares a `Verify` command, treat it as the umbrella automated
-gate. It combines only the checks this project actually has, in this order when
-available: typecheck, tests, then build. The command does not enable an absent
-test runner or replace focused evidence. It gives local work and optional CI one
-exact command to run. `/ci` owns Verify and CI setup. `/tests` adds the real test
-command to Verify when it already exists, but never creates CI only because
-testing was configured.
-
-**The opt-in switch is one signal: a `test` command in the Commands section of
-`AGENTS.md`.** Declare one and **tests become a gate for logic-bearing steps**,
-not an optional extra; leave it out and the loop verifies logic with the evidence
-it already uses (run it, a screenshot, the build). Adding the runner is itself a
-deliberate step, never a silent mid-step install. This is the single definition
-of the switch; the skills and `ai-interaction.md` only point back here.
-
-- **What to test (the scope rule):** pure logic where a wrong answer is possible -
-  parsers, formatters, validators, id/slug builders, server actions. These have
-  assertable inputs and outputs and real edge cases (empty, missing, malformed).
-- **What not to test:** UI components and integration-level surfaces (render or
-  export routes, anything driving a real browser or external service). Verify those
-  with a screenshot and the build, not brittle unit tests.
-- **The gate (when a runner is configured):** a build step that adds in-scope logic
-  must ship a passing test in the same reviewable diff. The project's test command
-  must be green before the step is approved, before any checkpoint commit, and
-  before `/complete` merges. UI and integration-only steps are exempt and ride on
-  screenshot plus build evidence.
-- **When it's named:** the `/feature` spec's Testing section predicts the coverage,
-  `/implement` writes the test with the step, and if a step surfaces logic the spec
-  didn't foresee, add a focused test then.
-- An empty suite should fail, not pass, so "no tests ran" never looks like "passed".
-- Test files live next to source files (for example `feature.test.ts`).
-- Run them via the project's test command (see Commands in `AGENTS.md`), not a
-  hardcoded tool name.
-
-Stack binding (swap for yours): a TypeScript app uses Vitest, `vi.mock()` for
-external dependencies (Prisma, Clerk, etc.), and `vi.useFakeTimers()` for
-time-dependent logic; a Python app would use pytest; a Go app `go test`.
-
-## Browser Verification
-
-For UI and integration behavior, prefer real browser evidence over reading the
-code and assuming it works.
-
-- If Playwright is already installed, or the Commands section of `AGENTS.md`
-  declares a Playwright script, use Playwright for browser checks, screenshots,
-  console-error checks, and user-flow verification.
-- If Playwright is not installed, do not add it silently in the middle of an
-  unrelated feature. Use the available dev server, browser screenshots, build
-  output, API output, or manual verification evidence instead.
-- Add Playwright only when the user asks for it, or when the current spec is
-  explicitly about setting up browser automation.
-- Browser evidence is especially important for flows that click, type, submit,
-  navigate, download files, render complex layouts, or depend on client-side
-  state.
-
-## Code Quality
-
-- No commented-out code unless specified
-- No unused imports or variables
-- Keep functions under 50 lines when possible
+- Format TypeScript, TSX, JavaScript, and JSON with oxfmt. Lint with oxlint and lint
+  Markdown with markdownlint.
+- Preserve Lefthook checks and Conventional Commits. Keep commits atomic and do not
+  add AI-attribution trailers.
+- Before changing a library, framework, SDK, API, CLI, or cloud integration, consult
+  current Context7 documentation. Record durable research findings under
+  `docs/research/`.
+- Use official scaffolding for new framework apps, libraries, and generated
+  configuration. Do not hand-roll configuration that an official initializer owns.
 
 ## Comments
 
@@ -160,12 +107,12 @@ Over-commenting is a common AI tell, so resist it.
 - Comment the **why**, not the **what**. Delete any comment that restates the code.
 - No banner/header blocks, section dividers, or step-by-step narration of obvious
   code. A file does not need a comment announcing each region.
-- A comment earns its place only when it captures something the code can't: a
+- A comment earns its place only when it captures something the code cannot: a
   non-obvious decision, a gotcha or workaround, why a value is what it is, or a
   link to a spec or issue.
 - Prefer self-documenting names and small functions over explanatory comments.
 - Keep doc comments minimal: a one-line purpose on an exported type or function is
-  plenty; don't write JSDoc that just repeats the signature.
+  plenty; do not write JSDoc that just repeats the signature.
 - When in doubt, leave the comment out.
 
 ## Writing
