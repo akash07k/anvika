@@ -29,4 +29,32 @@ describe('captureServerLogs', () => {
     expect(capture.records).toHaveLength(1);
     expect(capture.records[0]?.level).toBe('debug');
   });
+
+  it('excludes records below the requested capture floor', async () => {
+    const capture = await captureServerLogs({ level: 'warning' });
+    teardown = capture.teardown;
+    serverLogger('persistence').info('ignored');
+    serverLogger('persistence').warning('captured');
+    expect(capture.records).toHaveLength(1);
+    expect(capture.records[0]?.level).toBe('warning');
+  });
+
+  it('rejects overlapping captures', async () => {
+    const capture = await captureServerLogs();
+    teardown = capture.teardown;
+    await expect(captureServerLogs()).rejects.toThrow(
+      'A server log capture is already active; release it before creating another.',
+    );
+  });
+
+  it('keeps sequential captures isolated', async () => {
+    const first = await captureServerLogs();
+    await first.teardown();
+    serverLogger('persistence').info('ignored outside a capture');
+    const second = await captureServerLogs();
+    teardown = second.teardown;
+    serverLogger('persistence').info('captured by the next test');
+    expect(first.records).toHaveLength(0);
+    expect(second.records).toHaveLength(1);
+  });
 });
