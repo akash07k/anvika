@@ -118,3 +118,30 @@ build our own only when the SDK lacks it or its version is insufficient for our 
 reimplementations of SDK-provided behavior (message send, edit, regenerate, streaming, tool loops)
 are rejected in review unless a documented gap justifies them. When the answer is non-obvious, record
 the check in the relevant `docs/research/` note so it is durable.
+
+## AI Blueprint workflow
+
+This repository uses AI Blueprint as a workflow layer. It does not replace the
+project-specific requirements in this file or `docs/agents/`; those take
+precedence over Blueprint defaults.
+
+If AI Blueprint has not yet been adopted into this existing application, run
+`/adopt` once before using its normal workflow. It must preserve the existing
+architecture and conventions, then tune Blueprint context and commands to this
+repository.
+
+For a Blueprint workflow task, read:
+
+- `blueprint/context/project-overview.md`
+- `blueprint/context/coding-standards.md`
+- `blueprint/context/ai-interaction.md`
+- `blueprint/context/current-feature.md`
+
+Use Blueprint skills only when the user requests that workflow, such as
+`/feature`, `/fix`, `/implement`, `/check`, `/audit`, or `/complete`. For direct
+project work, follow the applicable Anvika requirements above and run
+`bun run verify` before opening or updating a pull request.
+
+When a Blueprint skill is installed for the active agent, follow its local skill
+definition. Do not assume every skill under `.agents/skills/` belongs to the
+Blueprint.
