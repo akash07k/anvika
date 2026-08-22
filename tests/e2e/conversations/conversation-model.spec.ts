@@ -6,7 +6,7 @@
  * shared serial SQLite DB is clean on entry and the conversations this spec creates need no per-test
  * cleanup. No real model call is made and no message text is ever asserted or logged.
  */
-import AxeBuilder from '@axe-core/playwright';
+import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 import { ALPHA } from './multi-conversation-helpers';

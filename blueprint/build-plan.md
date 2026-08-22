@@ -37,7 +37,7 @@
       synchronization diagnostics in cross-tab and conversation code.
     - [x] 7aad. **React Compiler navigation and presentation** - remediate diagnostics
       in shortcuts, focus, reasoning, and presentation components.
-    - [ ] 7aae. **E2E import lint cleanup** - replace default AxeBuilder imports with
+    - [x] 7aae. **E2E import lint cleanup** - replace default AxeBuilder imports with
       the documented named import across end-to-end tests.
     - [ ] 7aaf. **Oxc lint gate adoption** - upgrade oxlint and oxlint-tsgolint to a
       compatible documented pair, enable the React Compiler diagnostics as errors,

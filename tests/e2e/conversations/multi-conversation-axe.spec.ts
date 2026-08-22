@@ -1,4 +1,4 @@
-import AxeBuilder from '@axe-core/playwright';
+import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { ALPHA, BETA, GAMMA, navOf, seedConversations } from './multi-conversation-helpers';
 import { resetState } from '../support/reset';
