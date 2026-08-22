@@ -84,10 +84,6 @@ export function useSyncMessagesFromDetail({
   // always be < detail.revision (revisions are non-negative integers), so the transcript signature
   // check runs and either silently adopts (own-turn match) or re-seeds (remote divergence).
   const appliedRevisionRef = useRef<number>(-1);
-  const messagesRef = useRef(messages);
-  const setMessagesRef = useRef(setMessages);
-  messagesRef.current = messages;
-  setMessagesRef.current = setMessages;
 
   useEffect(() => {
     if (!detail) return;
@@ -98,10 +94,10 @@ export function useSyncMessagesFromDetail({
     // Adopt the revision first so this revision is never reconsidered, even if the re-seed below
     // throws - that keeps a faulty `setMessages` from re-running every render instead of once.
     appliedRevisionRef.current = rev;
-    if (sameTranscript(next, messagesRef.current)) return; // this tab's own turn (or already shown)
+    if (sameTranscript(next, messages)) return; // this tab's own turn (or already shown)
     const focusedDomId = focusedMessageDomId(); // captured before the re-seed removes any node
-    setMessagesRef.current(next);
+    setMessages(next);
     notify({ type: 'conversationUpdatedElsewhere' });
     restoreFocusAfterReseed(focusedDomId, next);
-  }, [detail, isBusy, isEditing]);
+  }, [detail, isBusy, isEditing, messages, setMessages]);
 }

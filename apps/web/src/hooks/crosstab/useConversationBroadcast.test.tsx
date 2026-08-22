@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -45,22 +45,25 @@ function render(over: {
   viewedId?: string | undefined;
   isBusy?: boolean;
   onDeletedElsewhere?: () => void;
+  strictMode?: boolean;
 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {over.strictMode ? <StrictMode>{children}</StrictMode> : children}
+    </QueryClientProvider>
   );
   const onDeletedElsewhere = over.onDeletedElsewhere ?? vi.fn();
   const result = renderHook(
-    (props: { viewedId?: string | undefined; isBusy: boolean }) =>
-      useConversationBroadcast({
-        viewedId: props.viewedId,
-        isBusy: props.isBusy,
-        onDeletedElsewhere,
-      }),
+    (props: { viewedId: string | undefined; isBusy: boolean; onDeletedElsewhere: () => void }) =>
+      useConversationBroadcast(props),
     {
       wrapper,
-      initialProps: { viewedId: over.viewedId ?? VIEWED, isBusy: over.isBusy ?? false },
+      initialProps: {
+        viewedId: over.viewedId ?? VIEWED,
+        isBusy: over.isBusy ?? false,
+        onDeletedElsewhere,
+      },
     },
   );
   const emit = (event: ConversationBroadcastEvent) => captured?.(event);
@@ -116,17 +119,42 @@ describe('useConversationBroadcast', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationsListKey });
   });
 
-  it('reads the latest viewedId/isBusy via refs without re-subscribing on re-render', () => {
-    const { queryClient, emit, rerender } = render({ viewedId: VIEWED, isBusy: true });
+  it('reads the latest viewedId and busy state without re-subscribing on re-render', () => {
+    const { queryClient, emit, onDeletedElsewhere, rerender } = render({
+      viewedId: VIEWED,
+      isBusy: true,
+    });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    // Re-render with streaming now false: the same captured handler must observe the fresh value.
-    rerender({ viewedId: VIEWED, isBusy: false });
+    rerender({ viewedId: OTHER, isBusy: false, onDeletedElsewhere });
     emit({ type: 'conversation-updated', id: VIEWED });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationDetailKey(VIEWED) });
+    expect(invalidate).not.toHaveBeenCalled();
+    emit({ type: 'conversation-updated', id: OTHER });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationDetailKey(OTHER) });
+    expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('reads a replacement deletion callback without re-subscribing on re-render', () => {
+    const firstCallback = vi.fn();
+    const currentCallback = vi.fn();
+    const { emit, rerender } = render({ onDeletedElsewhere: firstCallback });
+    rerender({ viewedId: VIEWED, isBusy: false, onDeletedElsewhere: currentCallback });
+    emit({ type: 'conversation-deleted', id: VIEWED });
+    expect(firstCallback).not.toHaveBeenCalled();
+    expect(currentCallback).toHaveBeenCalledOnce();
+    expect(unsubscribe).not.toHaveBeenCalled();
   });
 
   it('unsubscribes on unmount', () => {
     const { unmount } = render({});
+    unmount();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('subscribes and cleans up correctly under StrictMode', () => {
+    const { queryClient, emit, unmount } = render({ strictMode: true });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    emit({ type: 'list-changed' });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationsListKey });
     unmount();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });

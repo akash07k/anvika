@@ -33,7 +33,7 @@
       and keyboard-focus behavior.
     - [x] 7aab. **React Compiler chat lifecycle** - remediate ref, mutation, and
       memoization diagnostics in chat lifecycle hooks.
-    - [ ] 7aac. **React Compiler conversation synchronization** - remediate ref and
+    - [x] 7aac. **React Compiler conversation synchronization** - remediate ref and
       synchronization diagnostics in cross-tab and conversation code.
     - [ ] 7aad. **React Compiler navigation and presentation** - remediate diagnostics
       in shortcuts, focus, reasoning, and presentation components.

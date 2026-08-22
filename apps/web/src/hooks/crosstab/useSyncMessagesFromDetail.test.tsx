@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react';
+import { StrictMode, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as messageHeadingFocus from '../../components/message/messageHeadingFocus';
@@ -19,6 +20,9 @@ function detail(revision: number, messages: AnvikaUIMessage[]) {
 }
 function mockDetail(revision: number, messages: AnvikaUIMessage[]): void {
   vi.spyOn(queries, 'useConversationDetail').mockReturnValue(detail(revision, messages) as never);
+}
+function StrictModeWrapper({ children }: { children: ReactNode }) {
+  return <StrictMode>{children}</StrictMode>;
 }
 afterEach(() => vi.restoreAllMocks());
 
@@ -69,6 +73,48 @@ describe('useSyncMessagesFromDetail', () => {
     rerender({ messages: [M('a'), M('b')] });
     expect(setMessages).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('uses the current message setter after a rerender', () => {
+    const firstSetMessages = vi.fn();
+    const currentSetMessages = vi.fn();
+    mockDetail(1, [M('a')]);
+    const { rerender } = renderHook(
+      (p: { messages: AnvikaUIMessage[]; setMessages: (messages: AnvikaUIMessage[]) => void }) =>
+        useSyncMessagesFromDetail({
+          conversationId: 'jwq-112',
+          isBusy: false,
+          isEditing: false,
+          messages: p.messages,
+          setMessages: p.setMessages,
+        }),
+      { initialProps: { messages: [M('a')], setMessages: firstSetMessages } },
+    );
+    mockDetail(2, [M('a'), M('b')]);
+    rerender({ messages: [M('a')], setMessages: currentSetMessages });
+    expect(firstSetMessages).not.toHaveBeenCalled();
+    expect(currentSetMessages).toHaveBeenCalledWith([M('a'), M('b')]);
+  });
+
+  it('applies a remote revision once after the StrictMode effect probe', () => {
+    const setMessages = vi.fn();
+    const notify = vi.spyOn(notifier, 'notify');
+    mockDetail(1, [M('a')]);
+    const { rerender } = renderHook(
+      (p: { messages: AnvikaUIMessage[] }) =>
+        useSyncMessagesFromDetail({
+          conversationId: 'jwq-112',
+          isBusy: false,
+          isEditing: false,
+          messages: p.messages,
+          setMessages,
+        }),
+      { initialProps: { messages: [M('a')] }, wrapper: StrictModeWrapper },
+    );
+    mockDetail(2, [M('a'), M('b')]);
+    rerender({ messages: [M('a')] });
+    expect(setMessages).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledTimes(1);
   });
 
   it('re-seeds on a remote edit that keeps message ids but changes text', () => {
