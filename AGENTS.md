@@ -76,10 +76,12 @@ requirements (ADR 0007):
   tooling generates. Confirm each tool's current official method via Context7 first. This
   does not apply to our own application source or to bare workspace packages that have no
   scaffolder (`packages/shared`, `apps/server`) - those we author normally.
-- Document research as you go: whenever you research a library, framework, API, or
-  technical approach (via Context7 or official docs), capture the findings in
-  `docs/research/` - one file per topic, kept current - so the knowledge is durable rather
-  than single-use.
+- Keep library and technical research transient: consult current documentation through
+  Context7 when needed, but do not create or update files under `docs/research/`. That
+  directory is legacy material scheduled for a separate purge.
+- Follow the current documented migration path for every dependency update. Do not
+  suppress newly introduced diagnostics or retain temporary compatibility workarounds to
+  make an upgrade appear green; remediate the behavior or split the migration.
 - Keep the roadmap current (strict requirement): `ROADMAP.md` is the living, reader-facing
   status map and must never drift behind `main`. Treat updating it as part of the work for any
   change that changes project status - flip the finished entry's Status, advance the "Current
@@ -138,8 +140,8 @@ Before implementing any chat or orchestration capability, check whether the AI S
 it (consult the installed `ai` / `@ai-sdk/*` source and docs, per the ai-sdk skill and ADR 0009);
 build our own only when the SDK lacks it or its version is insufficient for our needs. Hand-rolled
 reimplementations of SDK-provided behavior (message send, edit, regenerate, streaming, tool loops)
-are rejected in review unless a documented gap justifies them. When the answer is non-obvious, record
-the check in the relevant `docs/research/` note so it is durable.
+are rejected in review unless a documented gap justifies them. When the answer is non-obvious, keep
+the decision in the active feature or fix spec only when it materially affects the work.
 
 ## AI Blueprint workflow
 

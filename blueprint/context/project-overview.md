@@ -37,9 +37,23 @@ and model resolution in the Server.
 6. **Local operation and quality infrastructure (shipped)** - diagnostics,
    content-safe logging, automated verification, accessibility checks, and
    standalone binary packaging.
-7. **Dependency modernization (next)** - update dependencies as one compatibility
-   effort while preserving the API-first architecture and accessibility contract. The
-   AI SDK v6-to-v7 portion uses `migrate-ai-sdk-v6-to-v7`.
+7. **Dependency modernization (in progress)** - preserve the API-first architecture and
+   accessibility contract through these coordinated subfeatures:
+   - **7a. Toolchain and test-platform modernization (shipped)** - updated Bun workspace
+     development, build, lint, formatting, and test dependencies while restoring the
+     existing quality gates.
+   - **7aa. Oxc and React Compiler lint adoption (next)** - update oxlint and
+     oxlint-tsgolint together, then remediate their documented diagnostics without
+     temporary suppressions.
+   - **7b. Server and shared runtime modernization** - update Server and shared runtime
+     dependencies while preserving the versioned API and SQLite behavior.
+   - **7c. AI SDK v7 migration** - update the AI SDK core, Providers, React integration,
+     and OpenRouter Provider together while preserving streamed chat and accessibility
+     behavior.
+   - **7d. Web runtime modernization** - update UI dependencies while preserving
+     keyboard and screen-reader behavior.
+   - **7e. Distribution compatibility** - resolve remaining upgrade regressions and
+     confirm local serving, end-to-end flows, and standalone build behavior.
 8. **Existing and post-upgrade bug fixes** - repair known existing bugs after
    dependency modernization and migration regressions found during that work.
 9. **Existing-experience enhancements** - improve current behavior after dependency

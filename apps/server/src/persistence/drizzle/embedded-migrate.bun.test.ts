@@ -21,7 +21,7 @@ const tables = (db: ReturnType<typeof makeDb>): string[] =>
   db
     .all<{ name: string }>(sql`SELECT name FROM sqlite_master WHERE type = 'table'`)
     .map((r) => r.name)
-    .sort();
+    .toSorted();
 
 const hashes = (db: ReturnType<typeof makeDb>): string[] =>
   db

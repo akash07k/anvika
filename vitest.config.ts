@@ -6,7 +6,8 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // Mirror the app's `@/*` alias (apps/web/vite.config.ts) so shadcn ui components resolve in the web
 // test projects; Vitest does not load the app's Vite config and per-project Vite config wins, so the
 // alias must live on each project that imports app code rather than at the root.
-const webAlias = { '@': resolve(import.meta.dirname, 'apps/web/src') };
+const webRoot = resolve(import.meta.dirname, 'apps/web');
+const webAlias = { '@': resolve(webRoot, 'src') };
 
 export default defineConfig({
   test: {
@@ -36,6 +37,10 @@ export default defineConfig({
         },
       },
       {
+        // Resolve browser-test dependencies from the web workspace, where cmdk and React are declared.
+        // Avoid inheriting the root config under this new root; the project carries its required options.
+        extends: false,
+        root: webRoot,
         resolve: { alias: webAlias },
         // cmdk uses React hooks internally; without this it gets optimized after the initial
         // bundle, causing a React duplicate-instance crash ("Invalid hook call") in browser
@@ -44,7 +49,7 @@ export default defineConfig({
         optimizeDeps: { include: ['cmdk'] },
         test: {
           name: 'web-browser',
-          include: ['apps/web/**/*.browser.test.{ts,tsx}'],
+          include: ['src/**/*.browser.test.{ts,tsx}'],
           // Real Chromium via Playwright: needed for document.ariaNotify, real focus, and
           // real keyboard events that jsdom cannot observe (ADR 0013). Runs only in the
           // `verify` gate, never in the fast pre-commit `test` script.

@@ -1,7 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
-import type { ReactElement } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -68,12 +74,31 @@ vi.mock('../hooks/conversation/useConversationReasoning', () => ({
 
 const { ConversationView } = await import('./ConversationView');
 
-function renderView(ui: ReactElement) {
+function ConversationRoute() {
+  return <ConversationView />;
+}
+
+function buildRouter() {
+  const rootRoute = createRootRoute();
+  const conversationRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: ConversationRoute,
+  });
+  return createRouter({
+    routeTree: rootRoute.addChildren([conversationRoute]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+}
+
+function renderView() {
   // A retry-off client so the `useConversationList` read inside `useChatConflict` settles at once.
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <HotkeysProvider initiallyActiveScopes={['*']}>{ui}</HotkeysProvider>
+      <HotkeysProvider initiallyActiveScopes={['*']}>
+        <RouterProvider router={buildRouter()} />
+      </HotkeysProvider>
     </QueryClientProvider>,
   );
 }
@@ -101,7 +126,7 @@ afterEach(() => {
 });
 
 test('Alt+A moves DOM focus to the latest assistant heading and it stays there', async () => {
-  await renderView(<ConversationView />);
+  await renderView();
 
   const heading = document.getElementById('message-a1');
   expect(heading, 'message-a1 heading must exist in the real tree').not.toBeNull();
@@ -124,7 +149,7 @@ test('Alt+A moves DOM focus to the latest assistant heading and it stays there',
 });
 
 test('Alt+A re-fires focus on the second press even when the heading already has focus', async () => {
-  await renderView(<ConversationView />);
+  await renderView();
 
   const landings = () => focusLog.filter((e) => e === 'in:#message-a1').length;
 

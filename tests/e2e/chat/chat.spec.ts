@@ -8,28 +8,28 @@ test.beforeEach(async ({ request }) => {
 });
 
 test('conversation surface renders accessibly', async ({ page, request }) => {
-  // The readiness gate shows the WelcomePanel (not the conversation surface) when the app is
-  // unconfigured. After resetState the app is unconfigured, so seed a placeholder configured
-  // connection here to reach a non-unconfigured (at least model-unavailable) state. seedSettings
-  // PATCHes the public connection then PUTs its apiKey via the secret endpoint, so the placeholder
-  // counts as a configured (keyed) connection under Option C.
+  // The readiness gate shows WelcomePanel when the app is unconfigured. Seed a manual local model
+  // instead of asserting the route's transient loading heading: it makes the loaded draft surface
+  // ready without requiring a reachable model server, and keeps the model picker fully opaque for axe.
   await seedSettings(request, {
+    selectedModelId: 'local:e2e-model',
     connections: [
       {
-        id: 'anthropic',
-        label: 'Anthropic',
-        type: 'anthropic',
-        apiKey: 'e2e-readiness-placeholder',
+        id: 'local',
+        label: 'Local',
+        type: 'openai-compatible',
+        baseUrl: 'http://127.0.0.1:9123/v1',
+        apiKey: 'sk-e2e-placeholder',
+        manualModelIds: ['e2e-model'],
       },
     ],
   });
 
   await page.goto('/');
-  // Exact match: the conversation-list nav adds an `<h2>Conversations</h2>`, so a substring match
-  // would ambiguously resolve to both it and the surface's `<h1>Conversation</h1>`.
-  await expect(page.getByRole('heading', { name: 'Conversation', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'New conversation' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Message' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /^Model\b/ })).toBeEnabled();
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])

@@ -94,8 +94,11 @@
 - Preserve Lefthook checks and Conventional Commits. Keep commits atomic and do not
   add AI-attribution trailers.
 - Before changing a library, framework, SDK, API, CLI, or cloud integration, consult
-  current Context7 documentation. Record durable research findings under
-  `docs/research/`.
+  current Context7 documentation. Do not create or update `docs/research/` files; that
+  directory is legacy material scheduled for a separate purge.
+- Follow the current documented migration path for dependency updates. Do not suppress
+  newly introduced diagnostics or retain temporary compatibility workarounds to make an
+  upgrade appear green; remediate the behavior or split the migration.
 - Use official scaffolding for new framework apps, libraries, and generated
   configuration. Do not hand-roll configuration that an official initializer owns.
 

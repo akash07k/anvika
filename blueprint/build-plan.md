@@ -22,6 +22,25 @@
   coordinated compatibility effort while preserving the API-first architecture and
   accessibility contract. Use `migrate-ai-sdk-v6-to-v7` for the AI SDK v6-to-v7
   portion of this work.
+  - [x] 7a. **Toolchain and test-platform modernization** - update Bun workspace
+    development, build, lint, formatting, and test dependencies; restore the existing
+    quality gates with only the compatibility changes those upgrades require.
+  - [ ] 7aa. **Oxc and React Compiler lint adoption** - update oxlint and
+    oxlint-tsgolint together, remediate their diagnostics, and retain documented lint
+    rules without temporary suppressions.
+  - [ ] 7b. **Server and shared runtime modernization** - update Hono, Drizzle, Zod,
+    LogTape, and related Server dependencies while preserving the versioned API and
+    SQLite behavior.
+  - [ ] 7c. **AI SDK v7 migration** - upgrade `ai`, AI SDK Providers,
+    `@ai-sdk/react`, and the OpenRouter Provider together; preserve streamed chat,
+    persistence, generated assistant message IDs, reasoning replay protection, and
+    accessible completion behavior.
+  - [ ] 7d. **Web runtime modernization** - update React, Vite, TanStack, Tailwind,
+    Radix/shadcn, Streamdown, and related UI dependencies while preserving keyboard and
+    screen-reader behavior.
+  - [ ] 7e. **Distribution compatibility** - resolve remaining cross-stack upgrade
+    regressions and confirm local serving, end-to-end flows, and standalone build
+    behavior.
 - [ ] 8. **Existing and post-upgrade bug fixes** - repair known existing bugs after
   dependency modernization, plus migration regressions found during that work.
 - [ ] 9. **Existing-experience enhancements** - improve the current implementation

@@ -42,9 +42,17 @@ Before writing or changing code that uses any library, framework, SDK, API, CLI 
 
 Add any framework, library, or new workspace app through its official initializer and documented setup - `bun create vite` for the web app, the official Tailwind v4 plugin setup, `bun create playwright` for E2E, the `shadcn` CLI, `drizzle-kit` for the database, `oxlint --init` for lint config, the TanStack Router plugin for routing, and so on. Never hand-write configuration that the library's own tooling generates; confirm the current official method via Context7 before running it. Exceptions are our own application source and the bare workspace packages that have no scaffolder (`packages/shared`, `apps/server` - a `package.json`, a `tsconfig.json`, and our code), which we author normally. Markdown documents are formatted by markdownlint (markdownlint-cli2 `--fix`); oxfmt is scoped to source code (ts/tsx/js/json) and never reflows authored prose, licenses, or docs.
 
-## Research documentation (mandatory)
+## Research consultation (mandatory)
 
-Whenever you research a library, framework, API, or technical approach, record the findings in `docs/research/` - one file per topic, kept current - so the knowledge is durable and reviewable, not consumed by a single action. Cite the official source. New research must leave a durable artifact there, not just inform one edit.
+Consult current official documentation through Context7 before changing a library,
+framework, API, or technical approach. Do not create or update files under
+`docs/research/`; that directory is legacy material scheduled for a separate purge.
+Keep only work-specific decisions in the active feature or fix spec when they materially
+affect the implementation.
+
+Dependency updates follow the current documented migration path. Do not suppress newly
+introduced diagnostics or retain temporary compatibility workarounds to make an upgrade
+appear green; remediate the behavior or split the migration.
 
 ## Validation - Zod at boundaries
 

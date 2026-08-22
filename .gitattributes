@@ -4,3 +4,4 @@
 # CRLF checkout would change the hash and could re-run already-applied migrations once
 # cross-compiled binaries (deferred) run against a DB created on a different OS.
 *.sql text eol=lf
+blueprint/context/current-feature.md text eol=lf
