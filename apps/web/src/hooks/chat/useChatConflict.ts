@@ -1,15 +1,11 @@
-import { useCallback, useEffect, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
 import { reportClientError } from '../../diagnostics/reportClientError';
 import { ApiClientError } from '../../lib/api-client';
-import {
-  conversationListQuery,
-  invalidateConversation,
-} from '../../lib/conversation/conversationQueries';
+import { conversationListQuery } from '../../lib/conversation/conversationQueries';
 import { onConversationConflict } from '../../lib/conversation/conversationMutations';
-import { conversationsBroadcaster } from '../../lib/conversation/conversationsBroadcast';
 import { isNoModelError } from '../../components/isNoModelError';
 import { notify } from '../../notifications/notifier';
 
@@ -21,8 +17,6 @@ export interface ChatConflictOptions {
   conversationId: string | undefined;
   /** Holds the in-flight turn's correlation id, reported alongside a generic error. */
   requestIdRef: RefObject<string>;
-  /** Dedup guard: the last announced error message, so a re-render does not re-speak it. */
-  announcedError: RefObject<string | null>;
   /** Ref to the Retry button, focused for a generic error. */
   retryRef: RefObject<HTMLButtonElement | null>;
   /** Ref to the Settings link, focused for a no-model error. */
@@ -33,15 +27,8 @@ export interface ChatConflictOptions {
   modelBeforeSend: () => Promise<void>;
 }
 
-/** What {@link useChatConflict} returns: the post-finish refresh and the composed send gate. */
+/** What {@link useChatConflict} returns: the composed send gate. */
 export interface ChatConflict {
-  /**
-   * Invalidate the conversation list and this conversation's detail after a turn finishes. The
-   * active `useConversationList` observer sees the stale mark and refetches in the background,
-   * so `useBaseRevision` returns a fresh revision by the time the user sends the next turn.
-   * Wire into `useChat`'s `onFinish`.
-   */
-  onTurnFinished: () => void;
   /**
    * The composed send gate: await the reasoning-override AND model-override pending writes AND
    * ensure the conversation list is loaded (so a first send has a list to read). Always resolves -
@@ -58,27 +45,27 @@ export interface ChatConflict {
 
 /**
  * Encapsulates the chat optimistic-concurrency concerns extracted from `ConversationView` (ADR 0007
- * line cap): the 409-conflict-vs-generic error branch, the post-finish revision refresh, and the
- * composed send gate. A conflict ({@link ApiClientError} code `conflict`) means the conversation
- * changed elsewhere: the stale caches are invalidated and a content-safe assertive notice fires, but
- * the composer is left intact and focus is NOT stolen, so the user can resend. Every
+ * line cap): the 409-conflict-vs-generic error branch and composed send gate. A conflict
+ * ({@link ApiClientError} code `conflict`) means the conversation changed elsewhere: the stale caches
+ * are invalidated and a content-safe assertive notice fires, but the composer is left intact and focus
+ * is NOT stolen, so the user can resend. Every
  * other error keeps the single-source generic path: announce once and move focus to Retry (or the
  * Settings link for a no-model error).
  *
  * @param options - See {@link ChatConflictOptions}.
- * @returns The {@link ChatConflict} `onTurnFinished` and composed `beforeSend`.
+ * @returns The {@link ChatConflict} composed `beforeSend`.
  */
 export function useChatConflict({
   error,
   conversationId,
   requestIdRef,
-  announcedError,
   retryRef,
   settingsLinkRef,
   reasoningBeforeSend,
   modelBeforeSend,
 }: ChatConflictOptions): ChatConflict {
   const queryClient = useQueryClient();
+  const announcedError = useRef<string | null>(null);
 
   useEffect(() => {
     if (error && error.message !== announcedError.current) {
@@ -102,17 +89,7 @@ export function useChatConflict({
       announcedError.current = null;
     }
     return undefined;
-  }, [error, conversationId, queryClient, announcedError, requestIdRef, retryRef, settingsLinkRef]);
-
-  const onTurnFinished = useCallback(() => {
-    invalidateConversation(queryClient, conversationId);
-    // Tell the other tabs THIS turn landed so their list reorders and the viewed detail refreshes.
-    // Content-safe (ids only) and best-effort - `post` never throws.
-    if (conversationId) {
-      conversationsBroadcaster.post({ type: 'conversation-updated', id: conversationId });
-    }
-    conversationsBroadcaster.post({ type: 'list-changed' });
-  }, [queryClient, conversationId]);
+  }, [error, conversationId, queryClient, requestIdRef, retryRef, settingsLinkRef]);
 
   const beforeSend = useCallback(async () => {
     await reasoningBeforeSend();
@@ -126,5 +103,5 @@ export function useChatConflict({
     await queryClient.ensureQueryData(conversationListQuery).catch(() => undefined);
   }, [queryClient, reasoningBeforeSend, modelBeforeSend]);
 
-  return { onTurnFinished, beforeSend };
+  return { beforeSend };
 }

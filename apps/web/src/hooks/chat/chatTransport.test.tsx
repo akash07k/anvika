@@ -100,18 +100,32 @@ describe('useChatTransport', () => {
     expect(calls[0]).not.toHaveProperty('modelId');
   });
 
-  it('picks up a model override change on the next send (read from a live ref, not a closure)', async () => {
+  it('picks up changed transport inputs on the next send without replacing the transport', async () => {
     const calls = captureSendBody();
     const { result, rerender } = renderHook(
-      ({ model }) => useChatTransport('conv-7', undefined, model),
-      { initialProps: { model: undefined as string | null | undefined } },
+      ({ id, revision, model }) => useChatTransport(id, revision, model),
+      {
+        initialProps: {
+          id: 'conv-7' as string | undefined,
+          revision: undefined as number | undefined,
+          model: undefined as string | null | undefined,
+        },
+      },
     );
+    const transport = result.current;
     await result.current.sendMessages(sendArgs);
+    expect(calls[0]).toMatchObject({ conversationId: 'conv-7' });
+    expect(calls[0]).not.toHaveProperty('baseRevision');
     expect(calls[0]).not.toHaveProperty('modelId');
-    // Switch the override; the SAME memoized transport must pick it up via the ref on the next send.
-    rerender({ model: 'anthropic:claude' });
+
+    rerender({ id: 'conv-8', revision: 0, model: 'anthropic:claude' });
+    expect(result.current).toBe(transport);
     await result.current.sendMessages(sendArgs);
-    expect(calls[1]).toMatchObject({ modelId: 'anthropic:claude' });
+    expect(calls[1]).toMatchObject({
+      conversationId: 'conv-8',
+      baseRevision: 0,
+      modelId: 'anthropic:claude',
+    });
   });
 
   it('reuses one transport instance across renders (memoized)', () => {

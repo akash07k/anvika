@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NotificationEvent } from '../../notifications/events';
@@ -51,6 +52,16 @@ describe('useGenerationHeartbeat', () => {
     render(<Harness generating={false} />);
     vi.advanceTimersByTime(6000);
     expect(seen).toEqual([]);
+  });
+
+  it('does not repeat initial announcements during the StrictMode effect probe', () => {
+    render(
+      <StrictMode>
+        <Harness generating={true} phase="thinking" />
+      </StrictMode>,
+    );
+
+    expect(seen).toEqual([{ type: 'generationStarted' }, { type: 'thinkingStarted' }]);
   });
 
   it('ticks with the thinking flag while in the thinking phase, then announces the transition', () => {

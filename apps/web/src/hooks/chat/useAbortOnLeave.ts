@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 
 /** Inputs for {@link useAbortOnLeave}. */
 export interface AbortOnLeaveInput {
@@ -23,21 +23,37 @@ export interface AbortOnLeaveInput {
  * is delivered by the existing `onFinish({ isAbort: true })` path on the persistent `Chat`, NOT
  * by this hook - calling `notify`/`announce` here would double-announce.
  *
- * Navigating while idle does nothing. The latest `isBusy` and `stop` are read via refs so the
- * unmount-only effect never closes over a stale value.
+ * Navigating while idle does nothing. A cleanup generation distinguishes a real unmount from the
+ * development-only StrictMode setup-cleanup-setup probe, while the latest input is published from
+ * an effect rather than read during render.
  *
  * @param input - The live in-flight state and the abort callback.
  */
 export function useAbortOnLeave({ isBusy, stop }: AbortOnLeaveInput): void {
-  const isBusyRef = useRef(isBusy);
-  const stopRef = useRef(stop);
-  isBusyRef.current = isBusy;
-  stopRef.current = stop;
+  const latestInputRef = useRef({ isBusy, stop });
+  const cleanupGenerationRef = useRef(0);
 
-  useEffect(
-    () => () => {
-      if (isBusyRef.current) void stopRef.current();
-    },
-    [],
+  useEffect(() => {
+    latestInputRef.current = { isBusy, stop };
+  }, [isBusy, stop]);
+  const abortLatestOnLeave = useEffectEvent(() => {
+    const latestInput = latestInputRef.current;
+    if (latestInput.isBusy) void latestInput.stop();
+  });
+  const isCurrentCleanupGeneration = useEffectEvent(
+    (generation: number) => cleanupGenerationRef.current === generation,
   );
+
+  useEffect(() => {
+    const generation = ++cleanupGenerationRef.current;
+
+    return () => {
+      queueMicrotask(() => {
+        // StrictMode replays cleanup and setup on this instance before microtasks run. A real
+        // unmount has no subsequent setup, so only it retains the captured generation.
+        if (!isCurrentCleanupGeneration(generation)) return;
+        abortLatestOnLeave();
+      });
+    };
+  }, []);
 }

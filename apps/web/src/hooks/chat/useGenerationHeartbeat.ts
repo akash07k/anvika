@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 
 import type { GenerationPhase } from '../../lib/message/generationPhase';
 import { notify } from '../../notifications/notifier';
@@ -27,10 +27,23 @@ export function useGenerationHeartbeat(
 ): void {
   const startRef = useRef<number | null>(null);
   const thinkStartRef = useRef<number | null>(null);
-  // Track the live phase in a ref so the interval closure reads the current value without
-  // restarting the timer (which would reset the elapsed-seconds clock) on every phase change.
-  const phaseRef = useRef<GenerationPhase>(phase);
-  phaseRef.current = phase;
+  const reportProgress = useEffectEvent(() => {
+    const start = startRef.current ?? Date.now();
+    const seconds = Math.round((Date.now() - start) / 1000);
+    // Tag the tick only while thinking; answer-phase ticks omit the flag entirely (rather than set
+    // it to undefined) to satisfy exactOptionalPropertyTypes and keep the non-thinking event shape.
+    notify(
+      phase === 'thinking'
+        ? { type: 'generationProgress', seconds, thinking: true }
+        : { type: 'generationProgress', seconds },
+    );
+  });
+  const announceInitialThinking = useEffectEvent(() => {
+    if (phase === 'thinking' && thinkStartRef.current === null) {
+      thinkStartRef.current = Date.now();
+      notify({ type: 'thinkingStarted' });
+    }
+  });
 
   // The heartbeat: emit `generationStarted` on entry and `generationProgress` every period. A turn
   // that begins already in the thinking phase opens the thinking lifecycle here (the phase effect
@@ -44,24 +57,13 @@ export function useGenerationHeartbeat(
       thinkStartRef.current = null;
       return undefined;
     }
-    startRef.current = Date.now();
-    notify({ type: 'generationStarted' });
-    if (phaseRef.current === 'thinking' && thinkStartRef.current === null) {
-      thinkStartRef.current = Date.now();
-      notify({ type: 'thinkingStarted' });
+    if (startRef.current === null) {
+      startRef.current = Date.now();
+      notify({ type: 'generationStarted' });
+      announceInitialThinking();
     }
 
-    const id = setInterval(() => {
-      const start = startRef.current ?? Date.now();
-      const seconds = Math.round((Date.now() - start) / 1000);
-      // Tag the tick only while thinking; answer-phase ticks omit the flag entirely (rather than set
-      // it to undefined) to satisfy exactOptionalPropertyTypes and keep the non-thinking event shape.
-      notify(
-        phaseRef.current === 'thinking'
-          ? { type: 'generationProgress', seconds, thinking: true }
-          : { type: 'generationProgress', seconds },
-      );
-    }, periodMs);
+    const id = setInterval(reportProgress, periodMs);
 
     return () => clearInterval(id);
   }, [generating, periodMs]);

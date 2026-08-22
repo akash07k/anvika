@@ -1,4 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+
+class OwnerAbortLifecycle {
+  #controller = new AbortController();
+  #listeners = new Set<() => void>();
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  };
+
+  getSignal = (): AbortSignal => this.#controller.signal;
+
+  resetIfAborted = (): void => {
+    if (!this.#controller.signal.aborted) return;
+    this.#controller = new AbortController();
+    for (const listener of this.#listeners) listener();
+  };
+
+  abort = (): void => this.#controller.abort();
+}
 
 /**
  * Provide an owner-lifetime {@link AbortSignal} that aborts when the calling component unmounts.
@@ -15,18 +35,12 @@ import { useEffect, useRef, useState } from 'react';
  * @returns A stable {@link AbortSignal} aborted on unmount.
  */
 export function useOwnerAbortSignal(): AbortSignal {
-  const controllerRef = useRef<AbortController | null>(null);
-  controllerRef.current ??= new AbortController();
-  const [, bump] = useState(0);
+  const [lifecycle] = useState(() => new OwnerAbortLifecycle());
 
   useEffect(() => {
-    if (controllerRef.current?.signal.aborted) {
-      controllerRef.current = new AbortController();
-      bump((n) => n + 1);
-    }
-    const controller = controllerRef.current;
-    return () => controller?.abort();
-  }, []);
+    lifecycle.resetIfAborted();
+    return () => lifecycle.abort();
+  }, [lifecycle]);
 
-  return controllerRef.current.signal;
+  return useSyncExternalStore(lifecycle.subscribe, lifecycle.getSignal, lifecycle.getSignal);
 }

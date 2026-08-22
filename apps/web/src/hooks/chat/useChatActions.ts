@@ -21,6 +21,8 @@ export interface ChatActionsOptions {
   composerRef: RefObject<HTMLTextAreaElement | null>;
   /** Holds the in-flight turn correlation id (passed to `beginTurn`). */
   requestIdRef: { current: string };
+  /** Receives each fresh turn id so the rendered error region stays in sync with diagnostics. */
+  onRequestIdChange?: (requestId: string) => void;
   /**
    * Awaited before EVERY generation-starting action (send, retry, per-message regenerate, edit) via the
    * shared `afterSendGate`, so an in-flight per-conversation override write (and the list load) lands
@@ -84,6 +86,7 @@ export function useChatActions({
   regenerate,
   composerRef,
   requestIdRef,
+  onRequestIdChange,
   beforeSend,
 }: ChatActionsOptions): ChatActions {
   // Run a generation-starting action behind the send gate: await any in-flight per-conversation
@@ -103,18 +106,20 @@ export function useChatActions({
     },
     [beforeSend, requestIdRef],
   );
+  const beginRequest = useCallback(() => {
+    const headers = beginTurn(requestIdRef);
+    onRequestIdChange?.(requestIdRef.current);
+    return headers;
+  }, [requestIdRef, onRequestIdChange]);
 
   const handleSend = useCallback(
     (text: string) => {
       notify({ type: 'messageSent' });
       afterSendGate(() =>
-        sendMessage(
-          { text, metadata: { createdAt: Date.now() } },
-          { headers: beginTurn(requestIdRef) },
-        ),
+        sendMessage({ text, metadata: { createdAt: Date.now() } }, { headers: beginRequest() }),
       );
     },
-    [sendMessage, requestIdRef, afterSendGate],
+    [sendMessage, beginRequest, afterSendGate],
   );
 
   const handleStop = useCallback(() => {
@@ -127,16 +132,16 @@ export function useChatActions({
   }, [busy, stop, composerRef]);
 
   const handleRetry = useCallback(() => {
-    afterSendGate(() => regenerate({ headers: beginTurn(requestIdRef) }));
+    afterSendGate(() => regenerate({ headers: beginRequest() }));
     composerRef.current?.focus(); // focus stays synchronous; only the regenerate is gated
-  }, [regenerate, composerRef, requestIdRef, afterSendGate]);
+  }, [regenerate, composerRef, beginRequest, afterSendGate]);
 
   const regenerateMessage = useCallback(
     (messageId: string) => {
       notify({ type: 'messageRegenerating' });
-      afterSendGate(() => regenerate({ messageId, headers: beginTurn(requestIdRef) }));
+      afterSendGate(() => regenerate({ messageId, headers: beginRequest() }));
     },
-    [regenerate, requestIdRef, afterSendGate],
+    [regenerate, beginRequest, afterSendGate],
   );
 
   const editMessage = useCallback(
@@ -147,11 +152,11 @@ export function useChatActions({
       afterSendGate(() =>
         sendMessage(
           { text, messageId, metadata: { createdAt: Date.now() } },
-          { headers: beginTurn(requestIdRef) },
+          { headers: beginRequest() },
         ),
       );
     },
-    [sendMessage, requestIdRef, afterSendGate],
+    [sendMessage, beginRequest, afterSendGate],
   );
 
   return { handleSend, handleStop, handleRetry, regenerateMessage, editMessage };

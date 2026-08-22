@@ -1,4 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react';
+import { REQUEST_ID_HEADER } from '@anvika/shared/chat';
 import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -63,6 +64,77 @@ describe('useChatActions', () => {
     expect(sendMessage).not.toHaveBeenCalled();
     release();
     await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+  });
+
+  it('reports the fresh request id that it attaches to a send', async () => {
+    const sendMessage = vi.fn();
+    const onRequestIdChange = vi.fn();
+    const { result } = renderHook(() =>
+      useChatActions({
+        busy: false,
+        sendMessage,
+        stop: vi.fn(),
+        regenerate: vi.fn(),
+        composerRef: createRef<HTMLTextAreaElement | null>(),
+        requestIdRef: { current: '' },
+        onRequestIdChange,
+      }),
+    );
+
+    result.current.handleSend('Hi');
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    const [message, options] = sendMessage.mock.calls[0] as [
+      { text?: string },
+      { headers?: Record<string, string> },
+    ];
+    expect(message.text).toBe('Hi');
+    const requestId = options.headers?.[REQUEST_ID_HEADER];
+    expect(requestId).toMatch(/^[a-f0-9]{8}$/);
+    expect(onRequestIdChange).toHaveBeenCalledWith(requestId);
+  });
+
+  it('reports the fresh request id that it attaches to retry, regenerate, and edit actions', async () => {
+    const sendMessage = vi.fn();
+    const regenerate = vi.fn();
+    const onRequestIdChange = vi.fn();
+    const { result } = renderHook(() =>
+      useChatActions({
+        busy: false,
+        sendMessage,
+        stop: vi.fn(),
+        regenerate,
+        composerRef: createRef<HTMLTextAreaElement | null>(),
+        requestIdRef: { current: '' },
+        onRequestIdChange,
+      }),
+    );
+
+    result.current.handleRetry();
+    result.current.regenerateMessage('m-2');
+    result.current.editMessage('m-3', 'edited');
+
+    await waitFor(() => expect(regenerate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    const [retry] = regenerate.mock.calls[0] as [{ headers?: Record<string, string> }];
+    const [regenerateMessage] = regenerate.mock.calls[1] as [{ headers?: Record<string, string> }];
+    const [, edit] = sendMessage.mock.calls[0] as [
+      { text?: string },
+      { headers?: Record<string, string> },
+    ];
+
+    const requestIds = [
+      retry.headers?.[REQUEST_ID_HEADER],
+      regenerateMessage.headers?.[REQUEST_ID_HEADER],
+      edit.headers?.[REQUEST_ID_HEADER],
+    ];
+    for (const requestId of requestIds) {
+      expect(requestId).toMatch(/^[a-f0-9]{8}$/);
+    }
+    expect(new Set(requestIds).size).toBe(3);
+    expect(onRequestIdChange).toHaveBeenNthCalledWith(1, requestIds[0]);
+    expect(onRequestIdChange).toHaveBeenNthCalledWith(2, requestIds[1]);
+    expect(onRequestIdChange).toHaveBeenNthCalledWith(3, requestIds[2]);
   });
 
   it('regenerateMessage regenerates the given message with turn headers and notifies', async () => {

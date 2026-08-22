@@ -1,8 +1,46 @@
 import { DefaultChatTransport } from 'ai';
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useState } from 'react';
 
 import { type AnvikaUIMessage } from '../../lib/message/anvikaMessage';
 import { chatFetch } from '../../lib/api/chatFetch';
+
+interface ChatRequestInputs {
+  conversationId: string | undefined;
+  baseRevision: number | undefined;
+  modelOverride: string | null | undefined;
+}
+
+class LiveChatTransport extends DefaultChatTransport<AnvikaUIMessage> {
+  readonly #state: { inputs: ChatRequestInputs };
+
+  constructor(inputs: ChatRequestInputs) {
+    const state = { inputs };
+    super({
+      api: '/api/v1/chat',
+      fetch: chatFetch,
+      prepareSendMessagesRequest: ({ id, messages, trigger, messageId, body }) => {
+        const { conversationId, baseRevision, modelOverride } = state.inputs;
+        return {
+          body: {
+            ...body,
+            id,
+            messages,
+            trigger,
+            messageId,
+            ...(conversationId ? { conversationId } : {}),
+            ...(typeof baseRevision === 'number' ? { baseRevision } : {}),
+            ...(modelOverride ? { modelId: modelOverride } : {}),
+          },
+        };
+      },
+    });
+    this.#state = state;
+  }
+
+  update(inputs: ChatRequestInputs): void {
+    this.#state.inputs = inputs;
+  }
+}
 
 /**
  * Build a chat transport for `useChat` that threads the live `conversationId` into every send.
@@ -11,14 +49,14 @@ import { chatFetch } from '../../lib/api/chatFetch';
  * (`{ ...body, id, messages, trigger, messageId }`) - because a returned `body` REPLACES the
  * default rather than merging it - and appends `conversationId` (when one is set), `baseRevision`
  * (the optimistic-concurrency cursor, when known), and `modelId` (the per-conversation model
- * override, when set). Reading each from a ref (not a closed-over value) means a remount, id change,
- * a fresher revision, or a model switch is picked up on the next send without rebuilding the
- * transport. When the id is absent the field is omitted and the turn stays ephemeral, matching
- * the pre-cutover behavior; when `baseRevision` is absent (a draft not yet in the list) the server
- * skips the conflict check and creates the row.
+ * override, when set). A layout effect publishes each committed render's values to the stable
+ * transport, because AI SDK v6 retains its `Chat` instance when the chat id is unchanged. When the
+ * id is absent the field is omitted and the turn stays ephemeral, matching the pre-cutover behavior;
+ * when `baseRevision` is absent (a draft not yet in the list) the server skips the conflict check and
+ * creates the row.
  *
  * @param conversationId - The target conversation id, or `undefined` for an ephemeral turn. The
- *   latest value is captured each render; the transport itself is memoized once per mount.
+ *   latest committed value is available to the stable transport.
  * @param baseRevision - The revision the client last saw for this conversation, or `undefined` when
  *   unknown (a draft). Included whenever it is a number - including `0`, a legitimate backfilled
  *   revision - so a stale send is rejected (409) rather than silently overwriting a newer turn.
@@ -33,36 +71,13 @@ export function useChatTransport(
   baseRevision?: number,
   modelOverride?: string | null,
 ): DefaultChatTransport<AnvikaUIMessage> {
-  const conversationIdRef = useRef(conversationId);
-  conversationIdRef.current = conversationId;
-  const baseRevisionRef = useRef(baseRevision);
-  baseRevisionRef.current = baseRevision;
-  const modelOverrideRef = useRef(modelOverride);
-  modelOverrideRef.current = modelOverride;
-  return useMemo(
-    () =>
-      new DefaultChatTransport<AnvikaUIMessage>({
-        api: '/api/v1/chat',
-        fetch: chatFetch,
-        prepareSendMessagesRequest: ({ id, messages, trigger, messageId, body }) => {
-          const target = conversationIdRef.current;
-          const revision = baseRevisionRef.current;
-          const model = modelOverrideRef.current;
-          return {
-            body: {
-              ...body,
-              id,
-              messages,
-              trigger,
-              messageId,
-              ...(target ? { conversationId: target } : {}),
-              ...(typeof revision === 'number' ? { baseRevision: revision } : {}),
-              ...(model ? { modelId: model } : {}),
-            },
-          };
-        },
-      }),
-    // The transport reads the live id from the ref, so it never needs rebuilding (the ref is stable).
-    [],
+  const [transport] = useState(
+    () => new LiveChatTransport({ conversationId, baseRevision, modelOverride }),
   );
+
+  useLayoutEffect(() => {
+    transport.update({ conversationId, baseRevision, modelOverride });
+  }, [transport, conversationId, baseRevision, modelOverride]);
+
+  return transport;
 }

@@ -1,5 +1,5 @@
 import { useChat } from '@ai-sdk/react';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { ChatErrorRegion } from './ChatErrorRegion';
 import { ChatReadinessNotice } from './ChatReadinessNotice';
@@ -12,6 +12,7 @@ import { useAbortOnLeave } from '../hooks/chat/useAbortOnLeave';
 import { useChatActions } from '../hooks/chat/useChatActions';
 import { useChatConflict } from '../hooks/chat/useChatConflict';
 import { useChatFinishHandler } from '../hooks/chat/useChatFinishHandler';
+import { useChatTurnCompletion } from '../hooks/chat/useChatTurnCompletion';
 import { useChatHotkeys } from '../hooks/shortcuts/useChatHotkeys';
 import { useChatScope } from '../hooks/chat/useChatScope';
 import { useCrossTabSync } from '../hooks/crosstab/useCrossTabSync';
@@ -78,9 +79,11 @@ export function ConversationView({
   const retryRef = useRef<HTMLButtonElement | null>(null);
   const settingsLinkRef = useRef<HTMLAnchorElement | null>(null);
   const pendingFocusOnComplete = useRef(false);
-  const announcedError = useRef<string | null>(null);
   const requestIdRef = useRef(''); // per-instance in-flight turn correlation id
-  const onTurnFinishedRef = useRef<() => void>(() => undefined); // lets onFinish reach the conflict refresh
+  const [requestId, setRequestId] = useState('');
+  const requestFocusOnComplete = useCallback(() => {
+    pendingFocusOnComplete.current = true;
+  }, []);
   const reasoning = useConversationReasoning(conversationId, settings ?? null);
   const model = useConversationModel(conversationId);
   // The conversation's effective model: its per-conversation override, else the settings default.
@@ -103,11 +106,12 @@ export function ConversationView({
   useReadinessLog(readiness);
   const baseRevision = useBaseRevision(conversationId);
   const transport = useChatTransport(conversationId, baseRevision, model.modelId);
+  const onTurnFinished = useChatTurnCompletion(conversationId);
   const onFinish = useChatFinishHandler({
     readWhole,
     focusMode,
-    pendingFocusOnComplete,
-    onTurnFinished: () => onTurnFinishedRef.current(),
+    onFocusRequested: requestFocusOnComplete,
+    onTurnFinished,
   });
   const { messages, setMessages, sendMessage, status, error, stop, regenerate } =
     useChat<AnvikaUIMessage>({
@@ -135,13 +139,11 @@ export function ConversationView({
     error,
     conversationId,
     requestIdRef,
-    announcedError,
     retryRef,
     settingsLinkRef,
     reasoningBeforeSend: reasoning.beforeSend,
     modelBeforeSend: model.beforeSend,
   });
-  onTurnFinishedRef.current = conflict.onTurnFinished;
 
   useFocusOnCompletion(messages, pendingFocusOnComplete); // focus latest response heading on complete
   const onJumpToThinking = useJumpToThinking(messages);
@@ -153,6 +155,7 @@ export function ConversationView({
     regenerate,
     composerRef,
     requestIdRef,
+    onRequestIdChange: setRequestId,
     beforeSend: conflict.beforeSend,
   });
   const { messageActions, editConfig } = useConversationMessageActions({
@@ -201,7 +204,7 @@ export function ConversationView({
         settingsLinkRef={settingsLinkRef}
         retryRef={retryRef}
         onRetry={handleRetry}
-        requestId={requestIdRef.current}
+        requestId={requestId}
       />
       {busy ? (
         <button type="button" onClick={handleStop}>

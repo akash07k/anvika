@@ -8,10 +8,9 @@ vi.mock('../../diagnostics/reportClientError', () => ({ reportClientError: vi.fn
 import { reportClientError } from '../../diagnostics/reportClientError';
 import { ApiClientError } from '../../lib/api-client';
 import {
-  conversationsListKey,
   conversationDetailKey,
+  conversationsListKey,
 } from '../../lib/conversation/conversationQueries';
-import { conversationsBroadcaster } from '../../lib/conversation/conversationsBroadcast';
 import type { NotificationEvent } from '../../notifications/events';
 import { registerChannel, resetChannels } from '../../notifications/notifier';
 import { useChatConflict, type ChatConflictOptions } from './useChatConflict';
@@ -53,7 +52,6 @@ function buildOptions(over: Partial<ChatConflictOptions> = {}): ChatConflictOpti
     error: undefined,
     conversationId: ID,
     requestIdRef: { current: 'abcd1234' },
-    announcedError: { current: null },
     retryRef,
     settingsLinkRef,
     reasoningBeforeSend: () => Promise.resolve(),
@@ -131,28 +129,7 @@ describe('useChatConflict error branch', () => {
   });
 });
 
-describe('useChatConflict revision refresh and composed send gate', () => {
-  it('onTurnFinished invalidates the list and this conversation detail', () => {
-    const options = buildOptions();
-    const { result, queryClient } = render(options);
-    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    result.current.onTurnFinished();
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationsListKey });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: conversationDetailKey(ID) });
-  });
-
-  it('onTurnFinished broadcasts conversation-updated for this id and list-changed to other tabs', () => {
-    const post = vi.spyOn(conversationsBroadcaster, 'post').mockImplementation(() => undefined);
-    try {
-      const { result } = render(buildOptions());
-      result.current.onTurnFinished();
-      expect(post).toHaveBeenCalledWith({ type: 'conversation-updated', id: ID });
-      expect(post).toHaveBeenCalledWith({ type: 'list-changed' });
-    } finally {
-      post.mockRestore();
-    }
-  });
-
+describe('useChatConflict send gate', () => {
   it('beforeSend composes the reasoning write, the model write, AND the list ensure-loaded step, and never rejects', async () => {
     const reasoningBeforeSend = vi.fn(() => Promise.resolve());
     const modelBeforeSend = vi.fn(() => Promise.resolve());

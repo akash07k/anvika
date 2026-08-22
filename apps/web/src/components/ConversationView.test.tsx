@@ -181,6 +181,7 @@ describe('ConversationView', () => {
 
     // The reported id is the failing turn's id, proving the correlation link -- not empty.
     expect(reportClientError).toHaveBeenCalledWith(theError, sentId);
+    expect(screen.getByText(`Reference: ${sentId}`)).toBeInTheDocument();
   });
 
   it('reports the clientError exactly once per distinct error across re-renders', () => {

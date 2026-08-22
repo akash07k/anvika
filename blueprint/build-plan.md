@@ -31,7 +31,7 @@
     - [x] 7aaa. **React Compiler form and connection effects** - remediate effect
       diagnostics in field and connection components while preserving controlled-input
       and keyboard-focus behavior.
-    - [ ] 7aab. **React Compiler chat lifecycle** - remediate ref, mutation, and
+    - [x] 7aab. **React Compiler chat lifecycle** - remediate ref, mutation, and
       memoization diagnostics in chat lifecycle hooks.
     - [ ] 7aac. **React Compiler conversation synchronization** - remediate ref and
       synchronization diagnostics in cross-tab and conversation code.
