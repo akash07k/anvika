@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -67,22 +67,14 @@ export function useConversationModel(conversationId: string | undefined): Conver
     : isActiveDraft
       ? draftModelId
       : null;
-  const [modelId, setModelId] = useState<string | null>(seededModelId);
-  // The last COMMITTED displayed value (updated every render) - the target a failed write rolls back
-  // to. Distinct from the request ref below because a write's catch can run before React commits the
-  // optimistic render, so this ref must not be used to detect a superseding pick.
-  const modelIdRef = useRef(modelId);
-  modelIdRef.current = modelId;
+  const [localModel, setLocalModel] = useState(() => ({
+    seed: seededModelId,
+    value: seededModelId,
+  }));
+  const modelId = localModel.seed === seededModelId ? localModel.value : seededModelId;
   // The latest INTENDED value, set synchronously in `onModelChange` (before the async write). The
   // catch compares against it to roll back ONLY when no newer pick has since superseded this request.
   const latestRequestRef = useRef<string | null>(modelId);
-  // Re-seed when the persisted or draft value changes (e.g. after the create-if-absent write refetch).
-  // The optimistic local state may briefly revert if a refetch resolves before the PATCH settles;
-  // beforeSend guarantees the write lands before any chat send, so the brief revert is acceptable.
-  useEffect(() => {
-    setModelId(seededModelId);
-    return undefined;
-  }, [seededModelId]);
 
   const queryClient = useQueryClient();
   const writer = useMemo(
@@ -91,9 +83,9 @@ export function useConversationModel(conversationId: string | undefined): Conver
   );
   const onModelChange = useCallback(
     (next: string | null): Promise<boolean> => {
-      const previous = modelIdRef.current; // the displayed value to roll back to if the write fails
+      const previous = modelId;
       latestRequestRef.current = next; // record the intent synchronously for the supersede guard
-      setModelId(next); // optimistic
+      setLocalModel({ seed: seededModelId, value: next }); // optimistic
       // Keep the draft store in sync for the ACTIVE draft so the choice survives until the first turn.
       if (isActiveDraft) useDraftStore.getState().setDraftModel(next);
       return writer
@@ -110,14 +102,14 @@ export function useConversationModel(conversationId: string | undefined): Conver
           // this one (then the newer value stands and owns its own rollback).
           if (latestRequestRef.current === next) {
             latestRequestRef.current = previous;
-            setModelId(previous);
+            setLocalModel({ seed: seededModelId, value: previous });
             if (isActiveDraft) useDraftStore.getState().setDraftModel(previous);
           }
           notify({ type: 'modelOverrideSaveFailed' });
           return false;
         });
     },
-    [writer, conversationId, isActiveDraft, queryClient],
+    [writer, conversationId, isActiveDraft, modelId, queryClient, seededModelId],
   );
   const beforeSend = useCallback(() => writer.pending(), [writer]);
 

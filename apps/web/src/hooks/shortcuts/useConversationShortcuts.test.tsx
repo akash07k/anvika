@@ -109,6 +109,22 @@ describe('useConversationShortcuts', () => {
     expect(events).toContainEqual({ type: 'conversationSwitched', slot: 2 });
   });
 
+  it('Alt+Shift+0 switches to the 10th most recent conversation', async () => {
+    listConversations = Array.from({ length: 10 }, (_, index) => ({
+      id: `conversation-${index + 1}`,
+    }));
+    listData = { conversations: listConversations };
+    renderHarness();
+
+    await userEvent.keyboard('{Alt>}{Shift>}0{/Shift}{/Alt}');
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/c/$conversationId',
+      params: { conversationId: 'conversation-10' },
+    });
+    expect(events).toContainEqual({ type: 'conversationSwitched', slot: 10 });
+  });
+
   it('an out-of-range slot announces empty and does NOT navigate', async () => {
     listData = { conversations: [{ id: 'only' }] };
     renderHarness();

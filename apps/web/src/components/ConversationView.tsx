@@ -78,11 +78,11 @@ export function ConversationView({
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const retryRef = useRef<HTMLButtonElement | null>(null);
   const settingsLinkRef = useRef<HTMLAnchorElement | null>(null);
-  const pendingFocusOnComplete = useRef(false);
   const requestIdRef = useRef(''); // per-instance in-flight turn correlation id
   const [requestId, setRequestId] = useState('');
+  const [focusRequest, setFocusRequest] = useState(0);
   const requestFocusOnComplete = useCallback(() => {
-    pendingFocusOnComplete.current = true;
+    setFocusRequest((request) => request + 1);
   }, []);
   const reasoning = useConversationReasoning(conversationId, settings ?? null);
   const model = useConversationModel(conversationId);
@@ -145,7 +145,7 @@ export function ConversationView({
     modelBeforeSend: model.beforeSend,
   });
 
-  useFocusOnCompletion(messages, pendingFocusOnComplete); // focus latest response heading on complete
+  useFocusOnCompletion(messages, focusRequest); // focus latest response heading on complete
   const onJumpToThinking = useJumpToThinking(messages);
 
   const { handleSend, handleStop, handleRetry, regenerateMessage, editMessage } = useChatActions({

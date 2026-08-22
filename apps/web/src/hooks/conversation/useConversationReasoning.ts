@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -69,14 +69,18 @@ export function useConversationReasoning(
 ): ConversationReasoning {
   const detail = useConversationDetail(conversationId);
   const loadedOverride = detail.data?.reasoningOverride ?? null;
-  const [override, setOverride] = useState<ReasoningEffortOverride>(loadedOverride ?? 'inherit');
-  // Re-seed when the persisted override changes (e.g. after a remote refetch). The optimistic local
-  // state may briefly revert if a refetch resolves before the PATCH settles; beforeSend guarantees the
-  // write lands before any chat send, so this brief revert is acceptable for a single-user surface.
-  useEffect(() => {
-    setOverride(loadedOverride ?? 'inherit');
-    return undefined;
-  }, [loadedOverride]);
+  const seededOverride: ReasoningEffortOverride =
+    loadedOverride === 'off' ||
+    loadedOverride === 'low' ||
+    loadedOverride === 'medium' ||
+    loadedOverride === 'high'
+      ? loadedOverride
+      : 'inherit';
+  const [localOverride, setLocalOverride] = useState(() => ({
+    seed: seededOverride,
+    value: seededOverride,
+  }));
+  const override = localOverride.seed === seededOverride ? localOverride.value : seededOverride;
 
   const selectedModelId = settings?.selectedModelId;
   const models = useModels();
@@ -90,7 +94,7 @@ export function useConversationReasoning(
   );
   const onEffortChange = useCallback(
     (next: ReasoningEffortOverride) => {
-      setOverride(next); // optimistic
+      setLocalOverride({ seed: seededOverride, value: next }); // optimistic
       writer
         .write(next === 'inherit' ? null : next)
         .then(() => {
@@ -101,7 +105,7 @@ export function useConversationReasoning(
         })
         .catch(() => notify({ type: 'reasoningOverrideSaveFailed' }));
     },
-    [writer, conversationId, queryClient],
+    [writer, conversationId, queryClient, seededOverride],
   );
   const beforeSend = useCallback(() => writer.pending(), [writer]);
 

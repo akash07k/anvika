@@ -6,6 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { useMidnightRefresh } from '../../hooks/settings/useMidnightRefresh';
 import { buildSections } from './conversationBuckets';
 import { ConversationListItem } from './ConversationListItem';
 
@@ -38,7 +39,7 @@ export interface ConversationSectionsProps {
  * @param props - See {@link ConversationSectionsProps}.
  */
 export function ConversationSections({ conversations }: ConversationSectionsProps) {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(useMidnightRefresh() / 1000);
   const sections = buildSections(conversations, now);
   return (
     <Accordion type="multiple" defaultValue={['pinned', 'recent']}>

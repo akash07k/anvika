@@ -9,10 +9,9 @@ server, but never runs, hosts, downloads, or manages AI models itself.
 
 ## Problem
 
-Existing AI clients often rely on visual controls, inaccessible navigation, or noisy
-streaming announcements. Anvika provides a predictable keyboard-first and
-screen-reader-aware experience while keeping AI orchestration, persistence, settings,
-and model resolution in the Server.
+Existing AI clients can depend on visual-only controls, inaccessible navigation, or
+noisy streaming announcements. Anvika provides predictable keyboard-first and
+screen-reader-aware AI interactions without taking responsibility for model hosting.
 
 ## Users
 
@@ -37,45 +36,41 @@ and model resolution in the Server.
 6. **Local operation and quality infrastructure (shipped)** - diagnostics,
    content-safe logging, automated verification, accessibility checks, and
    standalone binary packaging.
-7. **Dependency modernization (in progress)** - preserve the API-first architecture and
-   accessibility contract through these coordinated subfeatures:
-   - **7a. Toolchain and test-platform modernization (shipped)** - updated Bun workspace
-     development, build, lint, formatting, and test dependencies while restoring the
-     existing quality gates.
-   - **7aa. Oxc and React Compiler lint adoption (in progress)** - update oxlint and
-     oxlint-tsgolint together, then remediate their documented diagnostics without
-     temporary suppressions:
-     - **7aaa. React Compiler form and connection effects (next)** - remediate
-       form and connection effect diagnostics while preserving controlled-input
-       and keyboard-focus behavior.
-     - **7aab. React Compiler chat lifecycle** - remediate ref, mutation, and
-       memoization diagnostics in chat lifecycle hooks.
-     - **7aac. React Compiler conversation synchronization** - remediate ref and
-       synchronization diagnostics in cross-tab and conversation code.
-     - **7aad. React Compiler navigation and presentation** - remediate
+7. **Dependency modernization (in progress)** - preserve the API-first architecture
+   and accessibility contract through coordinated compatibility work.
+   - **7a. Toolchain and test-platform modernization (shipped)** - updated workspace
+     build, lint, formatting, and test dependencies while restoring quality gates.
+   - **7aa. Oxc and React Compiler lint adoption (in progress)** - update compatible
+     Oxc tooling and remediate diagnostics without temporary suppressions.
+     - **7aaa. React Compiler form and connection effects (shipped)** - remediated
+       field and connection effect diagnostics without changing controlled-input or
+       keyboard-focus behavior.
+     - **7aab. React Compiler chat lifecycle (shipped)** - remediated ref, mutation,
+       and memoization diagnostics in chat lifecycle hooks.
+     - **7aac. React Compiler conversation synchronization (shipped)** - remediated
+       ref and synchronization diagnostics in cross-tab and conversation code.
+     - **7aad. React Compiler navigation and presentation (shipped)** - remediated
        diagnostics in shortcuts, focus, reasoning, and presentation components.
-     - **7aae. E2E import lint cleanup** - replace default AxeBuilder imports
-       with the documented named import across end-to-end tests.
-     - **7aaf. Oxc lint gate adoption** - upgrade Oxc tools, enable the React
-       Compiler diagnostics as errors, remove obsolete directives, and restore
-       the full verification gate.
-   - **7b. Server and shared runtime modernization** - update Server and shared runtime
-     dependencies while preserving the versioned API and SQLite behavior.
-   - **7c. AI SDK v7 migration** - update the AI SDK core, Providers, React integration,
-     and OpenRouter Provider together while preserving streamed chat and accessibility
-     behavior.
+     - **7aae. E2E import lint cleanup (next)** - replace default AxeBuilder imports with
+       the documented named import across end-to-end tests.
+     - **7aaf. Oxc lint gate adoption** - enable React Compiler diagnostics as errors,
+       remove obsolete directives, regenerate `bun.lock`, and restore the full gate.
+   - **7b. Server and shared runtime modernization** - update Hono, Drizzle, Zod,
+     LogTape, and related dependencies while preserving the versioned API and SQLite.
+   - **7c. AI SDK v7 migration** - update AI SDK core, Providers, React integration,
+     and OpenRouter together while preserving chat persistence and accessibility.
    - **7d. Web runtime modernization** - update UI dependencies while preserving
      keyboard and screen-reader behavior.
    - **7e. Distribution compatibility** - resolve remaining upgrade regressions and
      confirm local serving, end-to-end flows, and standalone build behavior.
-8. **Existing and post-upgrade bug fixes** - repair known existing bugs after
-   dependency modernization and migration regressions found during that work.
-9. **Existing-experience enhancements** - improve current behavior after dependency
-   modernization and bug-fix work.
+8. **Existing and post-upgrade bug fixes** - repair known existing bugs and migration
+   regressions after dependency modernization.
+9. **Existing-experience enhancements** - improve the current implementation after
+   dependency and bug-fix work.
 10. **Image and document attachments** - let conversations include files and images
     for a Model to process.
 11. **Custom Assistants and prompt library** - create reusable instruction, model,
-    and generation-setting bundles with reusable prompts.
+    generation-setting, and prompt bundles.
 12. **Tools and MCP** - let Assistants invoke functions, connect to MCP servers, and
     use web search as a tool.
 13. **Skills runtime** - load model-agnostic Skill packages with packaged
@@ -83,9 +78,8 @@ and model resolution in the Server.
 14. **Retrieval and knowledge bases** - ground Assistants in user-provided document
     collections.
 15. **Voice interaction** - add speech-to-text input and text-to-speech output while
-    retaining the existing accessibility contract.
-16. **Advanced generation** - support image output and side-by-side comparisons
-    across Models.
+    retaining the accessibility contract.
+16. **Advanced generation** - support image output and side-by-side Model comparisons.
 17. **Hardening and optional desktop wrapper** - improve operational resilience and
     evaluate a more integrated desktop experience.
 
@@ -94,7 +88,7 @@ and model resolution in the Server.
 ### Conversation
 
 - `id` (string) - stable local identifier for a persisted conversation.
-- `owner` (string) - local owner scope for the conversation.
+- `owner` (string) - local owner scope.
 - `messages` (message array) - ordered transcript and message metadata.
 - `title` (string) - user-visible conversation title.
 - `revision` (integer) - optimistic-concurrency token for writes.
@@ -102,8 +96,8 @@ and model resolution in the Server.
 - `modelOverride` (string or null) - optional per-conversation Model selection.
 - `reasoningOverride` (string or null) - optional per-conversation reasoning setting.
 
-A Conversation belongs to one owner scope and uses the owner's settings when an
-override is absent.
+A Conversation belongs to one owner scope. A branch creates a new Conversation
+from an existing transcript; it retains its own metadata and revision token.
 
 ### Settings
 
@@ -112,33 +106,34 @@ override is absent.
 - `accessibilityPreferences` (configuration) - announcement, focus, keyboard, and
   display preferences.
 - `generationPreferences` (configuration) - global generation defaults.
-- `activeConversationId` (string or null) - the persisted conversation restored as
-  active.
+- `activeConversationId` (string or null) - persisted conversation restored as active.
 
-Settings belong to one owner scope and reference configured Provider connections and
-their available Models.
+Settings belong to one owner scope and reference Provider connections and their
+available Models.
 
 ### Provider connection
 
 - `id` (string) - stable connection identifier.
+- `owner` (string) - local owner scope.
 - `providerType` (string) - cloud Provider or compatible local-server type.
 - `publicConfiguration` (configuration) - connection settings safe to return to the
   client.
 - `secret` (separate protected value) - credentials excluded from normal responses
   and logs.
 
-A Provider connection belongs to an owner scope and supplies the Models available to
-that owner.
+A Provider connection belongs to an owner scope and supplies the Models available
+to that owner.
 
 ### Model metadata
 
 - `modelId` (string) - namespaced identity of a Model available through a connection.
 - `connectionId` (string) - Provider connection that can call the Model.
-- `enrichment` (metadata) - discovered and cached model details, with an offline
-  snapshot/cache fallback.
+- `enrichment` (metadata) - discovered model details.
+- `offlineSnapshot` (cached metadata) - local fallback for model details when live
+  discovery is unavailable.
 
-Model metadata belongs to a Provider connection and is used for model selection and
-generation configuration.
+Model metadata belongs to a Provider connection and is used for Model selection
+and generation configuration.
 
 ### Diagnostic log entry
 
@@ -147,8 +142,8 @@ generation configuration.
 - `level` (string) - content-safe outcome severity.
 - `eventData` (structured data) - non-secret, non-prompt diagnostic details.
 
-Diagnostic log entries belong to local runtime data and must never contain API keys or
-message content unless the explicit development opt-in is enabled.
+Diagnostic log entries belong to local runtime data. They must never contain API
+keys or message content unless explicit development content logging is enabled.
 
 ## Tech stack
 
@@ -156,13 +151,12 @@ message content unless the explicit development opt-in is enabled.
   standalone compilation.
 - **`packages/shared` with Zod** - typed Contract and trust-boundary schemas.
 - **Hono** - versioned Server routes.
-- **AI SDK Provider integrations** - model orchestration; migrate v6 to v7 during
-  dependency modernization.
+- **AI SDK Provider integrations** - model orchestration.
 - **Drizzle with Bun SQLite** - local persistence for owner-scoped data.
 - **LogTape** - content-safe structured diagnostics.
 - **Vite and React 19** - thin web client.
-- **TanStack Router, TanStack Query, and Zustand** - client routing, server-state
-  queries, and local client state.
+- **TanStack Router, TanStack Query, and Zustand** - routing, server-state queries,
+  and local client state.
 - **Tailwind CSS v4, shadcn/ui, and Streamdown** - component styling and streamed
   response rendering.
 - **Vitest, Bun test, Playwright, axe, oxlint, oxfmt, markdownlint, and Lefthook** -
@@ -179,10 +173,8 @@ support complete keyboard operation, use semantic structure, preserve predictabl
 focus, and announce status through the dedicated notification system rather than the
 visual streamed-text container.
 
-- `/` - active or draft conversation surface.
-- `/c/:conversationId` - persisted conversation surface.
-- `/settings` - Provider connections, model choices, and user preferences.
-- `/shortcuts` - keyboard shortcut reference.
+> TODO (confirm): The plans do not specify routes or screen inventory beyond the
+> accessible AI interaction requirements.
 
 ## Deployment
 
@@ -195,17 +187,15 @@ SQLite storage, and logs live under the configured data directory.
 - Standalone build: `bun run build`
 
 > TODO (confirm): If hosted deployment is in scope, record the provider, domain,
-> environment variables, and operational requirements in `project-plan.md`.
+> environment variables, health check, and operational requirements in
+> `project-plan.md`.
 
 ## Open questions
 
-- **Named bugs** - TODO (confirm): add the existing-bug outcomes before item 8 is
-  specified.
-- **Enhancements** - TODO (confirm): add concrete outcomes before item 9 is
-  specified.
-- **Roadmap order** - TODO (confirm): reprioritize items 10 through 17 after
-  stabilization work.
-- **Business and hosting** - TODO (confirm): decide monetization, licensing, and
-  hosted deployment scope.
+- **Named bugs** - add the existing-bug outcomes before item 8 is specified.
+- **Enhancements** - add concrete outcomes before item 9 is specified.
+- **Roadmap order** - reprioritize items 10 through 17 after stabilization work.
+- **Business and hosting** - decide monetization, licensing, and hosted-deployment
+  scope.
 
 No contradictions were found between the project plan and build plan.

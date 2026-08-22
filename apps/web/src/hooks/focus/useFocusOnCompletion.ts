@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { messageDomId, type AnvikaUIMessage } from '../../lib/message/anvikaMessage';
 
@@ -11,22 +11,21 @@ import { messageDomId, type AnvikaUIMessage } from '../../lib/message/anvikaMess
  * server heal lands) still maps to the rendered positional heading id.
  *
  * @param messages - The current message list from `useChat`.
- * @param pending - A ref whose `.current` is `true` while a focus move is outstanding.
+ * @param focusRequest - A monotonically increasing number that requests one focus move.
  */
-export function useFocusOnCompletion(
-  messages: AnvikaUIMessage[],
-  pending: { current: boolean },
-): void {
+export function useFocusOnCompletion(messages: AnvikaUIMessage[], focusRequest: number): void {
+  const completedRequest = useRef(0);
+
   useEffect(() => {
-    if (!pending.current) return undefined;
+    if (focusRequest === completedRequest.current) return undefined;
     const index = messages.length - 1;
     const last = messages[index];
     if (!last) return undefined;
     const el = document.getElementById(`message-${messageDomId(last, index)}`);
     if (el) {
       el.focus();
-      pending.current = false;
+      completedRequest.current = focusRequest;
     }
     return undefined;
-  }, [messages, pending]);
+  }, [focusRequest, messages]);
 }

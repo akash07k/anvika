@@ -127,6 +127,29 @@ describe('useConversationReasoning', () => {
     expect(result.current.override).toBe('inherit');
   });
 
+  it('adopts an externally refreshed reasoning override', () => {
+    hasDetailData = true;
+    detailOverride = 'low';
+    const { result, rerender } = render(ID, settingsFor('model-a'));
+    expect(result.current.override).toBe('low');
+
+    detailOverride = 'high';
+    rerender();
+
+    expect(result.current.override).toBe('high');
+  });
+
+  it('retains an optimistic override through an unrelated rerender', () => {
+    hasDetailData = true;
+    detailOverride = 'low';
+    const { result, rerender } = render(ID, settingsFor('model-a'));
+    act(() => result.current.onEffortChange('high'));
+
+    rerender();
+
+    expect(result.current.override).toBe('high');
+  });
+
   it('capable is true when the active model has reasoning capability', () => {
     modelsData = [{ id: 'model-a', capabilities: { text: true, reasoning: true } }];
     const { result } = render(ID, settingsFor('model-a'));

@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AnvikaUIMessage } from '../../lib/message/anvikaMessage';
 import { messageDomId } from '../../lib/message/anvikaMessage';
@@ -26,33 +26,65 @@ describe('useFocusOnCompletion', () => {
     el.remove();
   });
 
-  it('focuses the latest message heading when pending.current is true', () => {
+  it('focuses the latest message heading for a new request', () => {
     const msg = makeMessage('a1');
     const domId = `message-${messageDomId(msg, 0)}`;
     el.id = domId;
     document.body.appendChild(el);
 
     const messages: AnvikaUIMessage[] = [msg];
-    const pending = { current: true };
+    const { rerender } = renderHook(
+      ({ focusRequest }) => useFocusOnCompletion(messages, focusRequest),
+      { initialProps: { focusRequest: 0 } },
+    );
 
-    renderHook(() => useFocusOnCompletion(messages, pending));
+    rerender({ focusRequest: 1 });
 
     expect(el).toHaveFocus();
-    expect(pending.current).toBe(false);
   });
 
-  it('does nothing when pending.current is false', () => {
+  it('does nothing before a focus request', () => {
     const msg = makeMessage('b1');
     const domId = `message-${messageDomId(msg, 0)}`;
     el.id = domId;
     document.body.appendChild(el);
 
     const messages: AnvikaUIMessage[] = [msg];
-    const pending = { current: false };
 
-    renderHook(() => useFocusOnCompletion(messages, pending));
+    renderHook(() => useFocusOnCompletion(messages, 0));
 
     expect(el).not.toHaveFocus();
-    expect(pending.current).toBe(false);
+  });
+
+  it('consumes a request only once', () => {
+    const msg = makeMessage('c1');
+    const domId = `message-${messageDomId(msg, 0)}`;
+    el.id = domId;
+    document.body.appendChild(el);
+    const focus = vi.spyOn(el, 'focus');
+    const { rerender } = renderHook(
+      ({ messages, focusRequest }) => useFocusOnCompletion(messages, focusRequest),
+      { initialProps: { messages: [msg], focusRequest: 1 } },
+    );
+
+    rerender({ messages: [{ ...msg }], focusRequest: 1 });
+
+    expect(focus).toHaveBeenCalledOnce();
+  });
+
+  it('waits for a later message render when the requested heading is not mounted', () => {
+    const first = makeMessage('d1');
+    const latest = makeMessage('d2');
+    const latestDomId = `message-${messageDomId(latest, 1)}`;
+    const { rerender } = renderHook(
+      ({ messages, focusRequest }) => useFocusOnCompletion(messages, focusRequest),
+      { initialProps: { messages: [first], focusRequest: 1 } },
+    );
+
+    el.id = latestDomId;
+    document.body.appendChild(el);
+    rerender({ messages: [first, latest], focusRequest: 1 });
+
+    expect(el).toHaveFocus();
   });
 });

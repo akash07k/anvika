@@ -62,9 +62,8 @@ export function MessageList({
   onEditingChange,
 }: MessageListProps) {
   // Re-render at midnight so a "today" timestamp flips to its dated form once it is no longer today.
-  useMidnightRefresh();
+  const now = useMidnightRefresh();
   const labels: RoleLabels = displayNames ?? { user: 'You', assistant: 'Assistant' };
-  const now = Date.now();
 
   // At most one editor open at a time, keyed by the message id; the row renders its editor when set.
   const [editingId, setEditingId] = useState<string | null>(null);

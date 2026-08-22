@@ -2,7 +2,6 @@ import { type RefObject, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 import { type KeymapAction } from '@anvika/shared/settings/keymap';
-import { QUICK_NAV_ACTIONS } from '@anvika/shared/settings/keymap-quick-nav';
 
 import { logDiag } from '../../diagnostics/logDiag';
 import type { AnvikaUIMessage } from '../../lib/message/anvikaMessage';
@@ -50,6 +49,19 @@ export interface ChatHotkeysOptions {
   timestampOptions: TimestampFormatOptions;
 }
 
+interface QuickNavHotkeyOptions {
+  key: string;
+  slot: number;
+  messages: AnvikaUIMessage[];
+  lastPress: LastPressRef;
+  quickNavReads: 'descriptor' | 'full';
+  quickNavDoublePressMs: number;
+  quickNavLengthCue: 'count-first' | 'count-after';
+  quickNavPreviewWords: number;
+  displayNames: RoleLabels;
+  timestampOptions: TimestampFormatOptions;
+}
+
 /**
  * Jump focus to the composer, or speak a no-op notice when it already holds focus (a plain re-focus
  * would be a silent no-op, so the keystroke would otherwise give a screen-reader user no feedback).
@@ -61,6 +73,60 @@ function jumpToComposer(composerRef: RefObject<HTMLTextAreaElement | null>): voi
   if (!el) return;
   if (document.activeElement === el) notify({ type: 'alreadyInComposer' });
   else el.focus();
+}
+
+function useQuickNavHotkey({
+  key,
+  slot,
+  messages,
+  lastPress,
+  quickNavReads,
+  quickNavDoublePressMs,
+  quickNavLengthCue,
+  quickNavPreviewWords,
+  displayNames,
+  timestampOptions,
+}: QuickNavHotkeyOptions): void {
+  useHotkeys(
+    key,
+    () =>
+      handleQuickNavPress({
+        key,
+        slot,
+        messages,
+        lastPress,
+        now: Date.now(),
+        doublePressMs: quickNavDoublePressMs,
+        read: (target, now) =>
+          quickNavReads === 'full'
+            ? readFullMessage(target, now, displayNames, timestampOptions)
+            : describeMessage(
+                target,
+                now,
+                {
+                  lengthCue: quickNavLengthCue,
+                  previewWords: quickNavPreviewWords,
+                },
+                displayNames,
+                timestampOptions,
+              ),
+      }),
+    { scopes: ['chat'], preventDefault: true, enableOnFormTags: FORM_TAGS },
+    [
+      messages,
+      quickNavReads,
+      quickNavDoublePressMs,
+      quickNavLengthCue,
+      quickNavPreviewWords,
+      timestampOptions.weekday,
+      timestampOptions.dateStyle,
+      timestampOptions.hourCycle,
+      timestampOptions.seconds,
+      displayNames.user,
+      displayNames.assistant,
+      key,
+    ],
+  );
 }
 
 /**
@@ -89,6 +155,7 @@ export function useChatHotkeys({
   timestampOptions,
 }: ChatHotkeysOptions): void {
   const opts = { scopes: ['chat'], preventDefault: true, enableOnFormTags: FORM_TAGS };
+  const lastPress = useRef<LastPressRef['current']>(null);
   useHotkeys(
     keymap.stop,
     () => {
@@ -124,55 +191,24 @@ export function useChatHotkeys({
     keymap.jumpToThinking,
   ]);
 
-  // Quick-nav: one binding per slot. The shared `lastPress` ref tracks the last slot+time so a second
-  // press on the same slot within the window focuses (rather than re-reads) the message.
-  const lastPress = useRef<LastPressRef['current']>(null);
-  QUICK_NAV_ACTIONS.forEach((action, index) => {
-    const slot = index + 1;
-    useHotkeys(
-      keymap[action],
-      () =>
-        handleQuickNavPress({
-          key: keymap[action],
-          slot,
-          messages,
-          lastPress,
-          now: Date.now(),
-          doublePressMs: quickNavDoublePressMs,
-          read: (target, now) =>
-            quickNavReads === 'full'
-              ? readFullMessage(target, now, displayNames, timestampOptions)
-              : describeMessage(
-                  target,
-                  now,
-                  {
-                    lengthCue: quickNavLengthCue,
-                    previewWords: quickNavPreviewWords,
-                  },
-                  displayNames,
-                  timestampOptions,
-                ),
-        }),
-      opts,
-      [
-        messages,
-        quickNavReads,
-        quickNavDoublePressMs,
-        quickNavLengthCue,
-        quickNavPreviewWords,
-        // Depend on the four primitive fields, not the `timestampOptions` object: the parent may
-        // rebuild the object every render; the primitives only change when the values actually change.
-        timestampOptions.weekday,
-        timestampOptions.dateStyle,
-        timestampOptions.hourCycle,
-        timestampOptions.seconds,
-        // Depend on the resolved name strings, not the `displayNames` object: the parent rebuilds
-        // that object every render, so depending on it would re-register all 10 hotkeys on every
-        // render (e.g. each heartbeat tick). The strings only change when the names actually change.
-        displayNames.user,
-        displayNames.assistant,
-        keymap[action],
-      ],
-    );
-  });
+  const quickNavOptions = {
+    messages,
+    lastPress,
+    quickNavReads,
+    quickNavDoublePressMs,
+    quickNavLengthCue,
+    quickNavPreviewWords,
+    displayNames,
+    timestampOptions,
+  };
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav1, slot: 1 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav2, slot: 2 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav3, slot: 3 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav4, slot: 4 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav5, slot: 5 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav6, slot: 6 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav7, slot: 7 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav8, slot: 8 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav9, slot: 9 });
+  useQuickNavHotkey({ ...quickNavOptions, key: keymap.quickNav0, slot: 10 });
 }

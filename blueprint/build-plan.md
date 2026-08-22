@@ -35,7 +35,7 @@
       memoization diagnostics in chat lifecycle hooks.
     - [x] 7aac. **React Compiler conversation synchronization** - remediate ref and
       synchronization diagnostics in cross-tab and conversation code.
-    - [ ] 7aad. **React Compiler navigation and presentation** - remediate diagnostics
+    - [x] 7aad. **React Compiler navigation and presentation** - remediate diagnostics
       in shortcuts, focus, reasoning, and presentation components.
     - [ ] 7aae. **E2E import lint cleanup** - replace default AxeBuilder imports with
       the documented named import across end-to-end tests.

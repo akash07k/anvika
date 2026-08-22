@@ -8,19 +8,24 @@ import { useEffect, useState } from 'react';
  * re-renders often enough to stay fresh; this only covers the idle-across-midnight gap. The
  * transcript is not a live region, so the refresh is silent - it announces nothing.
  */
-export function useMidnightRefresh(): void {
-  const [, setTick] = useState(0);
+export function useMidnightRefresh(): number {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const scheduleNextMidnight = (): void => {
-      const now = new Date();
-      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+      const current = new Date();
+      const nextMidnight = new Date(
+        current.getFullYear(),
+        current.getMonth(),
+        current.getDate() + 1,
+      ).getTime();
       timer = setTimeout(() => {
-        setTick((t) => t + 1);
+        setNow(Date.now());
         scheduleNextMidnight();
-      }, nextMidnight - now.getTime());
+      }, nextMidnight - current.getTime());
     };
     scheduleNextMidnight();
     return () => clearTimeout(timer);
   }, []);
+  return now;
 }

@@ -29,6 +29,22 @@ describe('useChatHotkeys quick-nav read and double-press', () => {
     expect((ev as { text: string }).text).not.toContain('short'); // full, not the descriptor's bucket
   });
 
+  it('quick-nav slot 10 binds Alt+0 and reads the oldest message', async () => {
+    const tenMessages = Array.from({ length: 10 }, (_, index) => ({
+      id: `m${index + 1}`,
+      role: index === 0 ? ('assistant' as const) : ('user' as const),
+      parts: [{ type: 'text' as const, text: `message ${index + 1}` }],
+    })) as AnvikaUIMessage[];
+    renderHarness(vi.fn(), 'descriptor', tenMessages);
+
+    await userEvent.keyboard('{Alt>}0{/Alt}');
+
+    const ev = events.find((event) => event.type === 'quickNavRead');
+    expect(ev).toBeDefined();
+    expect((ev as { text: string }).text).toContain('Assistant');
+    expect((ev as { text: string }).text).toContain('message 1');
+  });
+
   it('quick-nav double press within the window focuses the slot message', async () => {
     renderHarness();
     await userEvent.keyboard('{Alt>}1{/Alt}');

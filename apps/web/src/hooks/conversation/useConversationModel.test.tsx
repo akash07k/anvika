@@ -106,6 +106,29 @@ describe('useConversationModel', () => {
     expect(result.current.modelId).toBeNull();
   });
 
+  it('adopts an externally refreshed model override', () => {
+    hasDetailData = true;
+    detailModelId = 'anthropic:claude';
+    const { result, rerender } = render(ID);
+    expect(result.current.modelId).toBe('anthropic:claude');
+
+    detailModelId = 'openai:gpt-4o';
+    rerender();
+
+    expect(result.current.modelId).toBe('openai:gpt-4o');
+  });
+
+  it('retains an optimistic selection through an unrelated rerender', () => {
+    hasDetailData = true;
+    detailModelId = 'anthropic:claude';
+    const { result, rerender } = render(ID);
+    act(() => void result.current.onModelChange('openai:gpt-4o'));
+
+    rerender();
+
+    expect(result.current.modelId).toBe('openai:gpt-4o');
+  });
+
   it('onModelChange sets modelId optimistically and PATCHes the id-scoped endpoint with the model', () => {
     const { result } = render(ID);
     act(() => void result.current.onModelChange('openai:gpt-4o'));
