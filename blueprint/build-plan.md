@@ -28,6 +28,20 @@
   - [ ] 7aa. **Oxc and React Compiler lint adoption** - update oxlint and
     oxlint-tsgolint together, remediate their diagnostics, and retain documented lint
     rules without temporary suppressions.
+    - [x] 7aaa. **React Compiler form and connection effects** - remediate effect
+      diagnostics in field and connection components while preserving controlled-input
+      and keyboard-focus behavior.
+    - [ ] 7aab. **React Compiler chat lifecycle** - remediate ref, mutation, and
+      memoization diagnostics in chat lifecycle hooks.
+    - [ ] 7aac. **React Compiler conversation synchronization** - remediate ref and
+      synchronization diagnostics in cross-tab and conversation code.
+    - [ ] 7aad. **React Compiler navigation and presentation** - remediate diagnostics
+      in shortcuts, focus, reasoning, and presentation components.
+    - [ ] 7aae. **E2E import lint cleanup** - replace default AxeBuilder imports with
+      the documented named import across end-to-end tests.
+    - [ ] 7aaf. **Oxc lint gate adoption** - upgrade oxlint and oxlint-tsgolint to a
+      compatible documented pair, enable the React Compiler diagnostics as errors,
+      remove obsolete lint directives, regenerate bun.lock, and restore the full gate.
   - [ ] 7b. **Server and shared runtime modernization** - update Hono, Drizzle, Zod,
     LogTape, and related Server dependencies while preserving the versioned API and
     SQLite behavior.

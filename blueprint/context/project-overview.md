@@ -42,9 +42,23 @@ and model resolution in the Server.
    - **7a. Toolchain and test-platform modernization (shipped)** - updated Bun workspace
      development, build, lint, formatting, and test dependencies while restoring the
      existing quality gates.
-   - **7aa. Oxc and React Compiler lint adoption (next)** - update oxlint and
+   - **7aa. Oxc and React Compiler lint adoption (in progress)** - update oxlint and
      oxlint-tsgolint together, then remediate their documented diagnostics without
-     temporary suppressions.
+     temporary suppressions:
+     - **7aaa. React Compiler form and connection effects (next)** - remediate
+       form and connection effect diagnostics while preserving controlled-input
+       and keyboard-focus behavior.
+     - **7aab. React Compiler chat lifecycle** - remediate ref, mutation, and
+       memoization diagnostics in chat lifecycle hooks.
+     - **7aac. React Compiler conversation synchronization** - remediate ref and
+       synchronization diagnostics in cross-tab and conversation code.
+     - **7aad. React Compiler navigation and presentation** - remediate
+       diagnostics in shortcuts, focus, reasoning, and presentation components.
+     - **7aae. E2E import lint cleanup** - replace default AxeBuilder imports
+       with the documented named import across end-to-end tests.
+     - **7aaf. Oxc lint gate adoption** - upgrade Oxc tools, enable the React
+       Compiler diagnostics as errors, remove obsolete directives, and restore
+       the full verification gate.
    - **7b. Server and shared runtime modernization** - update Server and shared runtime
      dependencies while preserving the versioned API and SQLite behavior.
    - **7c. AI SDK v7 migration** - update the AI SDK core, Providers, React integration,

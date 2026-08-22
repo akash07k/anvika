@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 
 /** One header row in the draft: a name, an optional newly-typed value, and the stored-set flag. */
 export interface HeaderRow {
@@ -31,18 +31,19 @@ export function HeadersEditor({
   const addButtonRef = useRef<HTMLButtonElement>(null);
   // A pending focus request: a row name input by index, or the Add button when the list emptied. It
   // is applied after the change commits so the target is mounted (matches ConnectionsFieldset).
-  const [focusTarget, setFocusTarget] = useState<{ index: number } | 'add' | null>(null);
+  const focusTargetRef = useRef<{ index: number } | 'add' | null>(null);
 
   // After the change commits, move focus to the requested name input (or the Add button), then clear.
   useLayoutEffect(() => {
+    const focusTarget = focusTargetRef.current;
     if (focusTarget === null) return;
     if (focusTarget === 'add') addButtonRef.current?.focus();
     else {
       const id = `${baseId}-name-${focusTarget.index}`;
       containerRef.current?.querySelector<HTMLInputElement>(`#${CSS.escape(id)}`)?.focus();
     }
-    setFocusTarget(null);
-  }, [focusTarget, baseId]);
+    focusTargetRef.current = null;
+  });
 
   const update = (index: number, patch: Partial<HeaderRow>): void => {
     onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -50,7 +51,7 @@ export function HeadersEditor({
 
   const add = (): void => {
     onChange([...rows, { name: '', isSet: false }]);
-    setFocusTarget({ index: rows.length });
+    focusTargetRef.current = { index: rows.length };
   };
 
   const remove = (index: number): void => {
@@ -58,7 +59,8 @@ export function HeadersEditor({
     onChange(next);
     // Keep focus in the editor: move to the next-then-previous remaining row's name input, or to the
     // Add button when the list is now empty (otherwise focus would drop to <body>).
-    setFocusTarget(next.length === 0 ? 'add' : { index: Math.min(index, next.length - 1) });
+    focusTargetRef.current =
+      next.length === 0 ? 'add' : { index: Math.min(index, next.length - 1) };
   };
 
   return (

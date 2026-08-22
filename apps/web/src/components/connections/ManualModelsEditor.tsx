@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 
 /**
  * An accessible add/remove editor for a connection's manual model IDs (the explicit model list used
@@ -19,18 +19,19 @@ export function ManualModelsEditor({
   const addButtonRef = useRef<HTMLButtonElement>(null);
   // A pending focus request: a row input by index, or the Add button when the list emptied. Applied
   // after the change commits so the target is mounted (matches ConnectionsFieldset's pattern).
-  const [focusTarget, setFocusTarget] = useState<{ index: number } | 'add' | null>(null);
+  const focusTargetRef = useRef<{ index: number } | 'add' | null>(null);
 
   // After the change commits, move focus to the requested model input (or the Add button), then clear.
   useLayoutEffect(() => {
+    const focusTarget = focusTargetRef.current;
     if (focusTarget === null) return;
     if (focusTarget === 'add') addButtonRef.current?.focus();
     else {
       const id = `${baseId}-model-${focusTarget.index}`;
       containerRef.current?.querySelector<HTMLInputElement>(`#${CSS.escape(id)}`)?.focus();
     }
-    setFocusTarget(null);
-  }, [focusTarget, baseId]);
+    focusTargetRef.current = null;
+  });
 
   const update = (index: number, value: string): void => {
     onChange(ids.map((id, i) => (i === index ? value : id)));
@@ -38,7 +39,7 @@ export function ManualModelsEditor({
 
   const add = (): void => {
     onChange([...ids, '']);
-    setFocusTarget({ index: ids.length });
+    focusTargetRef.current = { index: ids.length };
   };
 
   const remove = (index: number): void => {
@@ -46,7 +47,8 @@ export function ManualModelsEditor({
     onChange(next);
     // Keep focus in the editor: move to the next-then-previous remaining row's input, or to the Add
     // button when the list is now empty (otherwise focus would drop to <body>).
-    setFocusTarget(next.length === 0 ? 'add' : { index: Math.min(index, next.length - 1) });
+    focusTargetRef.current =
+      next.length === 0 ? 'add' : { index: Math.min(index, next.length - 1) };
   };
 
   return (

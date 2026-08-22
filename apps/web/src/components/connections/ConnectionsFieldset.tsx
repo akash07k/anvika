@@ -24,6 +24,8 @@ function removeDescription(label: string, modelCleared: boolean): string {
     : base;
 }
 
+type FocusRequest = { kind: 'saved'; id: string } | { kind: 'opener'; id: string | null };
+
 /**
  * The accessible connections section: a native `<fieldset>` whose `<legend>` carries an `<h2>`
  * "Connections", listing each {@link RedactedConnection} as a {@link ConnectionListItem}. It owns the
@@ -44,41 +46,44 @@ export function ConnectionsFieldset({
   const connections = settings.connections;
   const [form, setForm] = useState<FormState>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const [focusSavedId, setFocusSavedId] = useState<string | null>(null);
-  // After the inline form closes, move focus to the control that opened it: `null` = the Add button,
-  // otherwise that connection's Edit button. Deferred to an effect so the target is mounted first.
-  const [focusOpenerId, setFocusOpenerId] = useState<string | null | undefined>(undefined);
 
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const editButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const headingRefs = useRef<Map<string, HTMLHeadingElement>>(new Map());
+  const focusRequestRef = useRef<FocusRequest | null>(null);
+  // A new request object triggers the next committed render; the ref is cleared after focus without
+  // scheduling another render, and a missing saved heading remains queued for a later commit.
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
 
-  // After a save the parent re-renders with the new connection; move focus to the saved row's heading
-  // once it is in the DOM. The pending id is held (not cleared) until the heading actually exists, so
-  // a render where the new row has not yet arrived simply retries on the next render.
+  // Focus only after the target is mounted. A missing saved heading is retried after each later commit.
   useEffect(() => {
-    if (focusSavedId === null) return;
-    const heading = headingRefs.current.get(focusSavedId);
-    if (heading) {
-      heading.focus();
-      setFocusSavedId(null);
+    if (focusRequest === null) return;
+    const request = focusRequestRef.current;
+    if (request === null) return;
+    if (request.kind === 'saved') {
+      const heading = headingRefs.current.get(request.id);
+      if (heading) {
+        heading.focus();
+        focusRequestRef.current = null;
+      }
+      return;
     }
-  }, [focusSavedId, connections]);
+    if (request.id === null) addButtonRef.current?.focus();
+    else editButtonRefs.current.get(request.id)?.focus();
+    focusRequestRef.current = null;
+  });
 
-  // After a Cancel closes the form, restore focus to its opener once that control is re-mounted.
-  useEffect(() => {
-    if (focusOpenerId === undefined) return;
-    if (focusOpenerId === null) addButtonRef.current?.focus();
-    else editButtonRefs.current.get(focusOpenerId)?.focus();
-    setFocusOpenerId(undefined);
-  }, [focusOpenerId, form]);
+  const queueFocusRequest = (request: FocusRequest): void => {
+    focusRequestRef.current = request;
+    setFocusRequest(request);
+  };
 
   const existingIds = connections.map((c) => c.id);
   const pendingRemove = removeId === null ? null : connections.find((c) => c.id === removeId);
 
   const closeFormToOpener = (openerId: string | null): void => {
     setForm(null);
-    setFocusOpenerId(openerId);
+    queueFocusRequest({ kind: 'opener', id: openerId });
   };
 
   const focusAfterRemove = (removedId: string): void => {
@@ -93,8 +98,8 @@ export function ConnectionsFieldset({
     settings,
     onPatch,
     setForm,
-    setFocusSavedId,
-    setFocusOpenerId,
+    requestSavedFocus: (id) => queueFocusRequest({ kind: 'saved', id }),
+    requestOpenerFocus: (id) => queueFocusRequest({ kind: 'opener', id }),
     focusAfterRemove,
     setRemoveId,
   });

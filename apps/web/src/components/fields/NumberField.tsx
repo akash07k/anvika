@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { FieldShell } from './FieldShell';
 
@@ -62,8 +62,14 @@ export function NumberField({
   format?: ((value: number) => string) | undefined;
 }) {
   const toDraft = format ?? String;
+  const [previousValue, setPreviousValue] = useState(value);
+  const [previousFormat, setPreviousFormat] = useState(() => toDraft);
   const [draft, setDraft] = useState(toDraft(value));
-  useEffect(() => setDraft(toDraft(value)), [value, toDraft]);
+  if (value !== previousValue || toDraft !== previousFormat) {
+    setPreviousValue(value);
+    setPreviousFormat(() => toDraft);
+    setDraft(toDraft(value));
+  }
   return (
     <FieldShell id={id} label={label} description={description} error={error}>
       {({ controlId, labelId, describedBy }) => (

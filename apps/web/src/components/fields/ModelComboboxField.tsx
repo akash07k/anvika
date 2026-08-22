@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronsUpDown } from 'lucide-react';
 
 import type { ModelInfo } from '@anvika/shared/models/model-info';
@@ -105,10 +105,16 @@ export function ModelComboboxField({
   // Deterministically keep the first result highlighted as the user types or changes scope.
   // cmdk's own selectFirstItem fires only on search-input change; we control the highlight and
   // reset it on every query/scope/models change so arrowing (no dep change) is left untouched.
-  const [highlightedId, setHighlightedId] = useState('');
-  useEffect(() => {
-    setHighlightedId(filterModels(models, effectiveScope, query)[0]?.id ?? '');
-  }, [models, effectiveScope, query]);
+  const [previousModels, setPreviousModels] = useState(models);
+  const [previousScope, setPreviousScope] = useState(effectiveScope);
+  const [previousQuery, setPreviousQuery] = useState(query);
+  const [highlightedId, setHighlightedId] = useState(matches[0]?.id ?? '');
+  if (models !== previousModels || effectiveScope !== previousScope || query !== previousQuery) {
+    setPreviousModels(models);
+    setPreviousScope(effectiveScope);
+    setPreviousQuery(query);
+    setHighlightedId(matches[0]?.id ?? '');
+  }
 
   // When loading and empty, show nothing as the description (loading cue goes in the cue <p>).
   // When not loading and empty, show the add-a-connection guidance as the description.

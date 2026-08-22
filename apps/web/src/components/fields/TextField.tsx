@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { FieldShell } from './FieldShell';
 
@@ -30,8 +30,12 @@ export function TextField({
   onChange?: ((value: string) => void) | undefined;
   required?: boolean | undefined;
 }) {
+  const [previousValue, setPreviousValue] = useState(value);
   const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  if (value !== previousValue) {
+    setPreviousValue(value);
+    setDraft(value);
+  }
   return (
     <FieldShell id={id} label={label} description={description} error={error} required={required}>
       {({ controlId, labelId, describedBy }) => (

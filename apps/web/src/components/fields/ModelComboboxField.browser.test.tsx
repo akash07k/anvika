@@ -1,6 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { expect, test, vi } from 'vitest';
+import { useState } from 'react';
 
 import type { ModelInfo } from '@anvika/shared/models/model-info';
 
@@ -33,6 +34,24 @@ const MODELS = [
     displayName: 'Claude Sonnet',
   }),
 ];
+
+const REPLACED_MODELS = [model({ id: 'openai:gpt-5', displayName: 'GPT-5' })];
+
+function ModelHost() {
+  const [models, setModels] = useState(MODELS);
+  const [renderCount, setRenderCount] = useState(0);
+  return (
+    <>
+      <button type="button" onClick={() => setRenderCount((count) => count + 1)}>
+        Rerender {renderCount}
+      </button>
+      <button type="button" onClick={() => setModels(REPLACED_MODELS)}>
+        Replace models
+      </button>
+      <ModelComboboxField id="m" label="Model" value="" models={models} onChange={vi.fn()} />
+    </>
+  );
+}
 
 async function renderField(onChange = vi.fn()) {
   await render(
@@ -87,6 +106,30 @@ test('highlights the first result on open before any input', async () => {
   await userEvent.click(page.getByRole('button', { name: /Model/ }));
   await expect
     .element(page.getByRole('option', { name: 'GPT-4o' }))
+    .toHaveAttribute('aria-selected', 'true');
+});
+
+test('retains keyboard highlighting through unrelated rerenders and resets it for replacement models', async () => {
+  await render(<ModelHost />);
+  const trigger = page.getByRole('button', { name: /Model/ });
+
+  await userEvent.click(trigger);
+  await userEvent.keyboard('{ArrowDown}');
+  await expect
+    .element(page.getByRole('option', { name: 'Claude Sonnet' }))
+    .toHaveAttribute('aria-selected', 'true');
+
+  await userEvent.click(page.getByRole('button', { name: 'Rerender 0' }));
+  await expect.element(page.getByRole('button', { name: 'Rerender 1' })).toBeInTheDocument();
+  await userEvent.click(trigger);
+  await expect
+    .element(page.getByRole('option', { name: 'Claude Sonnet' }))
+    .toHaveAttribute('aria-selected', 'true');
+
+  await userEvent.click(page.getByRole('button', { name: 'Replace models' }));
+  await userEvent.click(trigger);
+  await expect
+    .element(page.getByRole('option', { name: 'GPT-5' }))
     .toHaveAttribute('aria-selected', 'true');
 });
 

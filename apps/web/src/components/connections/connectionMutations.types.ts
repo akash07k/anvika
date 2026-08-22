@@ -20,7 +20,7 @@ export type PatchFn = (
 /** Which inline form, if any, is open. */
 export type FormState = { mode: 'add' } | { mode: 'edit'; id: string } | null;
 
-/** The inputs the mutation hook needs from the owning fieldset (focus state stays in the component). */
+/** The inputs the mutation hook needs from the owning fieldset (focus handling stays in the component). */
 export interface UseConnectionMutationsInput {
   /** The current redacted connections list (the public, secret-free projection). */
   connections: RedactedConnection[];
@@ -30,15 +30,15 @@ export interface UseConnectionMutationsInput {
   onPatch: PatchFn;
   /** Close the inline form (set the form state to `null`). */
   setForm: Dispatch<SetStateAction<FormState>>;
-  /** Arm the post-save focus move to the saved row's heading. */
-  setFocusSavedId: Dispatch<SetStateAction<string | null>>;
+  /** Request a post-save focus move to the saved row's heading. */
+  requestSavedFocus: (id: string) => void;
   /**
-   * Arm the post-close focus move to the form's opener: `null` = the Add button, otherwise that
+   * Request the post-close focus move to the form's opener: `null` = the Add button, otherwise that
    * connection's Edit button. Used on a FAILED public PATCH so focus does not fall to `<body>` when
    * the Save button unmounts; the owning component's deferred effect focuses the target once
-   * it is re-mounted. `undefined` means "do not arm" (the effect no-ops).
+   * it is re-mounted.
    */
-  setFocusOpenerId: Dispatch<SetStateAction<string | null | undefined>>;
+  requestOpenerFocus: (id: string | null) => void;
   /** Move focus to the appropriate sibling (or Add button) after a confirmed remove. */
   focusAfterRemove: (removedId: string) => void;
   /** Close the destructive-remove confirmation dialog. */

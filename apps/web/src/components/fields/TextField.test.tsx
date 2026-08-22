@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TextField } from './TextField';
@@ -23,5 +24,21 @@ describe('TextField', () => {
     expect(describedBy).toBeTruthy();
     if (!describedBy) throw new Error('expected an aria-describedby');
     expect(document.getElementById(describedBy)?.textContent).toBe('Helpful hint.');
+  });
+
+  it('preserves active typing through an unrelated rerender and replaces it for a new value', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <TextField id="f" label="Label" value="saved" onCommit={vi.fn()} />,
+    );
+    const input = screen.getByLabelText('Label');
+
+    await user.clear(input);
+    await user.type(input, 'draft');
+    rerender(<TextField id="f" label="Label" value="saved" onCommit={vi.fn()} />);
+    expect(input).toHaveValue('draft');
+
+    rerender(<TextField id="f" label="Label" value="reconciled" onCommit={vi.fn()} />);
+    expect(input).toHaveValue('reconciled');
   });
 });

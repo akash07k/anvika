@@ -27,7 +27,7 @@ const SILENT = { announce: false } as const;
  * owning component (which threads in the focus arming callbacks). Separating the mutation flow from
  * the focus management keeps each unit within the size cap and single-responsibility (ADR 0007).
  *
- * @param input - The connections, settings, shared dispatcher, and the form/focus state setters.
+ * @param input - The connections, settings, shared dispatcher, and form/focus request callbacks.
  * @returns The save, remove, and enable-toggle orchestrators.
  */
 export function useConnectionMutations(input: UseConnectionMutationsInput): ConnectionMutations {
@@ -36,8 +36,8 @@ export function useConnectionMutations(input: UseConnectionMutationsInput): Conn
     settings,
     onPatch,
     setForm,
-    setFocusSavedId,
-    setFocusOpenerId,
+    requestSavedFocus,
+    requestOpenerFocus,
     focusAfterRemove,
     setRemoveId,
   } = input;
@@ -76,7 +76,7 @@ export function useConnectionMutations(input: UseConnectionMutationsInput): Conn
       // The public PATCH failed and the Save button is unmounting; re-arm focus to the form's
       // opener - the edited row's Edit button if that row still exists, else the Add button - so focus
       // does not fall to <body>. The store already announced the failure.
-      setFocusOpenerId(connections.some((c) => c.id === connection.id) ? connection.id : null);
+      requestOpenerFocus(connections.some((c) => c.id === connection.id) ? connection.id : null);
       return;
     }
     if (secret) {
@@ -89,12 +89,12 @@ export function useConnectionMutations(input: UseConnectionMutationsInput): Conn
         // stale (useModels has a 5-min staleTime and suppresses refocus refetches).
         void queryClient.invalidateQueries({ queryKey: modelsQueryKey });
         notify({ type: 'connectionSaveFailed', label: connection.label });
-        setFocusSavedId(connection.id);
+        requestSavedFocus(connection.id);
         return;
       }
     }
     notify({ type: 'connectionSaved', label: connection.label });
-    setFocusSavedId(connection.id);
+    requestSavedFocus(connection.id);
   };
 
   const confirmRemove = async (target: RedactedConnection): Promise<void> => {
